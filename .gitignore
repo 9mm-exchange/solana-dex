@@ -8,4 +8,6 @@ test-ledger
 .vscode
 .yarn
 Makefile
-
+.yml
+.lock
+.ini
