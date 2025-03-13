@@ -44,7 +44,7 @@ describe("withdraw test", () => {
       poolState.token1Program,
       liquidity,
       new BN(10000000000),
-      new BN(20000000000)
+      new BN(20000000000),
     );
 
     await withdraw(
@@ -58,9 +58,13 @@ describe("withdraw test", () => {
       liquidity.divn(2),
       new BN(10000000),
       new BN(1000000),
-      confirmOptions
+      confirmOptions,
     );
     const newPoolState = await program.account.poolState.fetch(poolAddress);
+    console.log("newPoolState.lpSupply: ", newPoolState.lpSupply.toString());
+    console.log("poolState.lpSupply: ", poolState.lpSupply.toString());
+    console.log("liquidity: ", liquidity.toString());
+    console.log("liquidity.divn(2): ", liquidity.divn(2).toString());
     assert(newPoolState.lpSupply.eq(liquidity.divn(2).add(poolState.lpSupply)));
   });
 

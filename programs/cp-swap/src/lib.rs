@@ -8,9 +8,9 @@ use crate::curve::fees::FEE_RATE_DENOMINATOR_VALUE;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("41SK4sLnWcUQaeWiMF1Xv1geHuQesYpAX2hXqZFfUBur");
+declare_id!("8Z2EU7EHz2GNdwQwW6EmFxQAA7orGbofeg3aZxbDy7he");
 
-pub const ADMIN: Pubkey = pubkey!("G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF");
+pub const ADMIN: Pubkey = pubkey!("H7YMxhKgLw2NDM9WQnpcUefPvCaLJCCYYaq1ETLHXJuH");
 
 pub const AUTH_SEED: &str = "vault_and_lp_mint_auth_seed";
 

@@ -8,6 +8,7 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  sendAndConfirmTransaction,
   Signer,
   SystemProgram,
 } from "@solana/web3.js";
@@ -61,6 +62,7 @@ export async function setupInitializeTest(
     config.create_fee,
     confirmOptions
   );
+  console.log("configAddress: ", configAddress.toBase58());
   return {
     configAddress,
     token0,
@@ -232,17 +234,20 @@ export async function createAmmConfig(
     return address;
   }
 
-  const ix = await program.methods
+  const tx = await program.methods
     .createAmmConfig(config_index, tradeFeeRate, protocolFeeRate, fundFeeRate)
     .accounts({
       owner: owner.publicKey,
       ammConfig: address,
       systemProgram: SystemProgram.programId,
     })
-    .instruction();
-
-  const tx = await sendTransaction(connection, [ix], [owner], confirmOptions);
-  console.log("init amm config tx: ", tx);
+    .transaction();
+  
+    tx.feePayer = owner.publicKey
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+    // console.log(await connection.simulateTransaction(tx))
+    const sig = await sendAndConfirmTransaction(connection, tx, [owner])
+    console.log("init amm config tx: ", sig);
   return address;
 }
 
