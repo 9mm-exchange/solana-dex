@@ -30,9 +30,7 @@ describe("swap test", () => {
       { transferFeeBasisPoints: 0, MaxFee: 0 }
     );
     const inputToken = poolState.token0Mint;
-    console.log("inputToken: ", inputToken.toBase58());
     const inputTokenProgram = poolState.token0Program;
-    console.log("inputTokenProgram: ", inputTokenProgram.toBase58());
     const inputTokenAccountAddr = getAssociatedTokenAddressSync(
       inputToken,
       owner.publicKey,
@@ -45,9 +43,7 @@ describe("swap test", () => {
       "processed",
       inputTokenProgram
     );
-    console.log("inputTokenAccountBefore amount: ", inputTokenAccountBefore.amount);
     let amount_in = new BN(100000000);
-    console.log("amount_in: ", amount_in.toString());
     await swap_base_input(
       program,
       owner,
@@ -59,150 +55,139 @@ describe("swap test", () => {
       amount_in,
       new BN(0)
     );
-
     const inputTokenAccountAfter = await getAccount(
       anchor.getProvider().connection,
       inputTokenAccountAddr,
       "processed",
       inputTokenProgram
     );
-    
-    console.log("inputTokenAccountAfter amount: ", inputTokenAccountAfter.amount);
-
     assert.equal(
       inputTokenAccountBefore.amount - inputTokenAccountAfter.amount,
       BigInt(amount_in.toString())
     );
   });
 
-  // it("swap base output without transfer fee", async () => {
-  //   const { configAddress, poolAddress, poolState } = await setupSwapTest(
-  //     program,
-  //     anchor.getProvider().connection,
-  //     owner,
-  //     {
-  //       config_index: 0,
-  //       tradeFeeRate: new BN(10),
-  //       protocolFeeRate: new BN(1000),
-  //       fundFeeRate: new BN(25000),
-  //       create_fee: new BN(0),
-  //     },
-  //     { transferFeeBasisPoints: 0, MaxFee: 0 }
-  //   );
-  //   console.log("configAddress: ", configAddress.toBase58());
-  //   console.log("poolAddress: ", poolAddress.toBase58());
-  //   console.log("poolState: ", poolState);
-  //   const inputToken = poolState.token0Mint;
-  //   console.log("inputToken: ", inputToken.toBase58());
-  //   const inputTokenProgram = poolState.token0Program;
-  //   const inputTokenAccountAddr = getAssociatedTokenAddressSync(
-  //     inputToken,
-  //     owner.publicKey,
-  //     false,
-  //     inputTokenProgram
-  //   );
-  //   const outputToken = poolState.token1Mint;
-  //   console.log("outputToken: ", outputToken.toBase58());
-  //   const outputTokenProgram = poolState.token1Program;
-  //   const outputTokenAccountAddr = getAssociatedTokenAddressSync(
-  //     outputToken,
-  //     owner.publicKey,
-  //     false,
-  //     outputTokenProgram
-  //   );
-  //   const outputTokenAccountBefore = await getAccount(
-  //     anchor.getProvider().connection,
-  //     outputTokenAccountAddr,
-  //     "processed",
-  //     outputTokenProgram
-  //   );
-  //   console.log("outputTokenAccountBefore amount: ", outputTokenAccountBefore.amount);
-  //   let amount_out = new BN(100000000);
-  //   await swap_base_output(
-  //     program,
-  //     owner,
-  //     configAddress,
-  //     inputToken,
-  //     inputTokenProgram,
-  //     poolState.token1Mint,
-  //     poolState.token1Program,
-  //     amount_out,
-  //     new BN(10000000000000),
-  //     confirmOptions
-  //   );
-  //   const outputTokenAccountAfter = await getAccount(
-  //     anchor.getProvider().connection,
-  //     outputTokenAccountAddr,
-  //     "processed",
-  //     outputTokenProgram
-  //   );
-  //   console.log("outputTokenAccountAfter amount: ", outputTokenAccountAfter.amount);
-  //   assert.equal(
-  //     outputTokenAccountAfter.amount - outputTokenAccountBefore.amount,
-  //     BigInt(amount_out.toString())
-  //   );
-  // });
+  it("swap base output without transfer fee", async () => {
+    const { configAddress, poolAddress, poolState } = await setupSwapTest(
+      program,
+      anchor.getProvider().connection,
+      owner,
+      {
+        config_index: 0,
+        tradeFeeRate: new BN(10),
+        protocolFeeRate: new BN(1000),
+        fundFeeRate: new BN(25000),
+        create_fee: new BN(0),
+      },
+      { transferFeeBasisPoints: 0, MaxFee: 0 }
+    );
+    const inputToken = poolState.token0Mint;
+    const inputTokenProgram = poolState.token0Program;
+    const inputTokenAccountAddr = getAssociatedTokenAddressSync(
+      inputToken,
+      owner.publicKey,
+      false,
+      inputTokenProgram
+    );
+    const outputToken = poolState.token1Mint;
+    const outputTokenProgram = poolState.token1Program;
+    const outputTokenAccountAddr = getAssociatedTokenAddressSync(
+      outputToken,
+      owner.publicKey,
+      false,
+      outputTokenProgram
+    );
+    const outputTokenAccountBefore = await getAccount(
+      anchor.getProvider().connection,
+      outputTokenAccountAddr,
+      "processed",
+      outputTokenProgram
+    );
+    let amount_out = new BN(100000000);
+    await swap_base_output(
+      program,
+      owner,
+      configAddress,
+      inputToken,
+      inputTokenProgram,
+      poolState.token1Mint,
+      poolState.token1Program,
+      amount_out,
+      new BN(10000000000000),
+      confirmOptions
+    );
+    const outputTokenAccountAfter = await getAccount(
+      anchor.getProvider().connection,
+      outputTokenAccountAddr,
+      "processed",
+      outputTokenProgram
+    );
+    assert.equal(
+      outputTokenAccountAfter.amount - outputTokenAccountBefore.amount,
+      BigInt(amount_out.toString())
+    );
+  });
 
-  // it("swap base output with transfer fee", async () => {
-  //   const transferFeeConfig = { transferFeeBasisPoints: 5, MaxFee: 5000 }; // %5
-  //   const { configAddress, poolAddress, poolState } = await setupSwapTest(
-  //     program,
-  //     anchor.getProvider().connection,
-  //     owner,
-  //     {
-  //       config_index: 0,
-  //       tradeFeeRate: new BN(10),
-  //       protocolFeeRate: new BN(1000),
-  //       fundFeeRate: new BN(25000),
-  //       create_fee: new BN(0),
-  //     },
-  //     transferFeeConfig
-  //   );
+  it("swap base output with transfer fee", async () => {
+    const transferFeeConfig = { transferFeeBasisPoints: 5, MaxFee: 5000 }; // %5
+    const { configAddress, poolAddress, poolState } = await setupSwapTest(
+      program,
+      anchor.getProvider().connection,
+      owner,
+      {
+        config_index: 0,
+        tradeFeeRate: new BN(10),
+        protocolFeeRate: new BN(1000),
+        fundFeeRate: new BN(25000),
+        create_fee: new BN(0),
+      },
+      transferFeeConfig
+    );
 
-  //   const inputToken = poolState.token0Mint;
-  //   const inputTokenProgram = poolState.token0Program;
-  //   const inputTokenAccountAddr = getAssociatedTokenAddressSync(
-  //     inputToken,
-  //     owner.publicKey,
-  //     false,
-  //     inputTokenProgram
-  //   );
-  //   const outputToken = poolState.token1Mint;
-  //   const outputTokenProgram = poolState.token1Program;
-  //   const outputTokenAccountAddr = getAssociatedTokenAddressSync(
-  //     outputToken,
-  //     owner.publicKey,
-  //     false,
-  //     outputTokenProgram
-  //   );
-  //   const outputTokenAccountBefore = await getAccount(
-  //     anchor.getProvider().connection,
-  //     outputTokenAccountAddr,
-  //     "processed",
-  //     outputTokenProgram
-  //   );
-  //   let amount_out = new BN(100000000);
-  //   await swap_base_output(
-  //     program,
-  //     owner,
-  //     configAddress,
-  //     inputToken,
-  //     inputTokenProgram,
-  //     poolState.token1Mint,
-  //     poolState.token1Program,
-  //     amount_out,
-  //     new BN(10000000000000),
-  //     confirmOptions
-  //   );
-  //   const outputTokenAccountAfter = await getAccount(
-  //     anchor.getProvider().connection,
-  //     outputTokenAccountAddr,
-  //     "processed",
-  //     outputTokenProgram
-  //   );
-  //   assert.equal(
-  //     outputTokenAccountAfter.amount - outputTokenAccountBefore.amount,
-  //     BigInt(amount_out.toString())
-  //   );
-  // });
+    const inputToken = poolState.token0Mint;
+    const inputTokenProgram = poolState.token0Program;
+    const inputTokenAccountAddr = getAssociatedTokenAddressSync(
+      inputToken,
+      owner.publicKey,
+      false,
+      inputTokenProgram
+    );
+    const outputToken = poolState.token1Mint;
+    const outputTokenProgram = poolState.token1Program;
+    const outputTokenAccountAddr = getAssociatedTokenAddressSync(
+      outputToken,
+      owner.publicKey,
+      false,
+      outputTokenProgram
+    );
+    const outputTokenAccountBefore = await getAccount(
+      anchor.getProvider().connection,
+      outputTokenAccountAddr,
+      "processed",
+      outputTokenProgram
+    );
+    let amount_out = new BN(100000000);
+    await swap_base_output(
+      program,
+      owner,
+      configAddress,
+      inputToken,
+      inputTokenProgram,
+      poolState.token1Mint,
+      poolState.token1Program,
+      amount_out,
+      new BN(10000000000000),
+      confirmOptions
+    );
+    const outputTokenAccountAfter = await getAccount(
+      anchor.getProvider().connection,
+      outputTokenAccountAddr,
+      "processed",
+      outputTokenProgram
+    );
+    assert.equal(
+      outputTokenAccountAfter.amount - outputTokenAccountBefore.amount,
+      BigInt(amount_out.toString())
+    );
+  });
 });

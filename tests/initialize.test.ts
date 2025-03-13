@@ -33,12 +33,6 @@ describe("initialize test", () => {
         { transferFeeBasisPoints: 0, MaxFee: 0 },
         confirmOptions
       );
-    
-      console.log("🚀 ~ it ~ configAddress:", configAddress.toBase58())
-      console.log("🚀 ~ it ~ token0:", token0.toBase58())
-      console.log("🚀 ~ it ~ token0Program:", token0Program.toBase58())
-      console.log("🚀 ~ it ~ token1:", token1.toBase58())
-      console.log("🚀 ~ it ~ token1Program:", token1Program.toBase58())
 
     const initAmount0 = new BN(10000000000);
     const initAmount1 = new BN(10000000000);

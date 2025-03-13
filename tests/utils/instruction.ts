@@ -62,7 +62,6 @@ export async function setupInitializeTest(
     config.create_fee,
     confirmOptions
   );
-  console.log("configAddress: ", configAddress.toBase58());
   return {
     configAddress,
     token0,
