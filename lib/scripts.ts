@@ -14,8 +14,10 @@ import { RaydiumCpSwap } from "../target/types/raydium_cp_swap";
 import {
   AMM_CONFIG_SEED,
   AUTH_SEED,
+  OBSERVATION_SEED,
   POOL_LP_MINT_SEED,
-  POOL_SEED
+  POOL_SEED,
+  POOL_VAULT_SEED
 } from "./constant";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -24,6 +26,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { createTokenMintAndAssociatedTokenAccount, u16ToBytes } from "./util";
+import { mintAuthority } from '../../BOT/Pumpfun-bundler/config';
 
 export const createConfigTx = async (
   admin: PublicKey,
@@ -159,18 +162,21 @@ export const initializeTx = async (
     [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(index)],
     program.programId
   );
-  console.log("🚀 ~ configAddr:", configAddr)
+  console.log("configAddr:", configAddr.toBase58())
   
   const transferFeeConfig = { transferFeeBasisPoints: 0, MaxFee: 0 };
+  const mintAuthorityKeypair = Keypair.generate();
+  console.log("🚀 ~ mintAuthorityKeypair:", mintAuthorityKeypair.publicKey.toBase58())
+  const mintAuthority = new NodeWallet(mintAuthorityKeypair);
   
   const [{ token0, token0Program}, { token1, token1Program }] = await createTokenMintAndAssociatedTokenAccount(
     connection,
     admin,
-    new Keypair(),
+    mintAuthority,
     transferFeeConfig
   );
-  console.log("token0", token0.toBase58());
-  console.log("token1", token1.toBase58());
+  console.log("token0: ", token0.toBase58());
+  console.log("token1: ", token1.toBase58());
 
   const [auth] = await PublicKey.findProgramAddress(
     [Buffer.from(AUTH_SEED)],
@@ -187,19 +193,48 @@ export const initializeTx = async (
     ],
     program.programId
   )
-  console.log("poolAddress", poolAddress.toBase58());
+  console.log("poolAddress: ", poolAddress.toBase58());
   
   const [lpMint] = await PublicKey.findProgramAddress(
     [Buffer.from(POOL_LP_MINT_SEED), poolAddress.toBuffer()],
     program.programId
   )
-  console.log("lpMint", lpMint.toBase58());
+  console.log("lpMint: ", lpMint.toBase58());
+
+  const [vault0] = await PublicKey.findProgramAddress(
+    [
+      Buffer.from(POOL_VAULT_SEED),
+      token0.toBuffer(),
+      poolAddress.toBuffer()
+    ],
+    program.programId
+  )
+  console.log("vault0: ", vault0.toBase58());
+
+  const [vault1] = await PublicKey.findProgramAddress(
+    [
+      Buffer.from(POOL_VAULT_SEED),
+      token1.toBuffer(),
+      poolAddress.toBuffer()
+    ],
+    program.programId
+  )
+  console.log("vault1: ", vault1.toBase58());
   
   const [creatorLpTokenAddr] = await PublicKey.findProgramAddress(
     [creator.toBuffer(), lpMint.toBuffer()],
     program.programId
   );
-  console.log("creatorLpTokenAddr", creatorLpTokenAddr.toBase58());
+  console.log("creatorLpTokenAddr: ", creatorLpTokenAddr.toBase58());
+
+  const [observationAddr] = await PublicKey.findProgramAddress(
+    [
+      Buffer.from(OBSERVATION_SEED),
+      poolAddress.toBuffer()
+    ],
+    program.programId
+  )
+  console.log("observationAddr: ", observationAddr.toBase58());
 
   const creatorToken0 = getAssociatedTokenAddressSync(
     token0,
@@ -207,7 +242,7 @@ export const initializeTx = async (
     false,
     token0Program
   )
-  console.log("creatorToken0", creatorToken0.toBase58());
+  console.log("creatorToken0: ", creatorToken0.toBase58());
 
   const creatorToken1 = getAssociatedTokenAddressSync(
     token1,
@@ -215,13 +250,14 @@ export const initializeTx = async (
     false,
     token1Program
   )
-  console.log("creatorToken1", creatorToken1.toBase58());
+  console.log("creatorToken1: ", creatorToken1.toBase58());
+
   const tx = await program.methods
     .initialize(new BN(initAmount0), new BN(initAmount1), new BN(0))
     .accounts({
-      ammConfig: configAddr,
-      creator: creator,
       creatorLpToken: creatorLpTokenAddr,
+      creator: creator,
+      ammConfig: configAddr,
       creatorToken0: creatorToken0,
       creatorToken1: creatorToken1,
       token0Mint: token0,

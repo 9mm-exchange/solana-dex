@@ -45,7 +45,7 @@ function programCommand(name: string) {
     .option(
       "-r, --rpc <string>",
       "Solana cluster RPC name",
-      "https://devnet.helius-rpc.com/?api-key=7387c4ee-fe6a-43a6-96ea-05e6534aa500 "
+      "https://devnet.helius-rpc.com/?api-key=8ea72171-c0a2-43eb-a8a5-b77c98d89343"
     )
     .option(
       "-k, --keypair <string>",
