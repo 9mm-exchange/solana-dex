@@ -22,7 +22,7 @@ members = ["programs/cp-swap"]
 [scripts]
 build = "rm -rf target && anchor build && mkdir -p target/deploy && cp ./keys/program/keypair.json ./target/deploy/cp_swap-keypair.json"
 build-with-so = "anchor run build && ln -s $HOME/.cargo/target/sbf-solana-solana/release/cp_swap.so $PWD/target/deploy/cp_swap.so"
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/initialize.test.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/*.test.ts"
 
 [test]
 startup_wait = 10000

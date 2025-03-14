@@ -57,7 +57,6 @@ fn update_fund_fee_rate(amm_config: &mut Account<AmmConfig>, fund_fee_rate: u64)
 
 fn set_new_protocol_owner(amm_config: &mut Account<AmmConfig>, new_owner: Pubkey) -> Result<()> {
     require_keys_neq!(new_owner, Pubkey::default());
-    #[cfg(feature = "enable-log")]
     msg!(
         "amm_config, old_protocol_owner:{}, new_owner:{}",
         amm_config.protocol_owner.to_string(),
@@ -69,7 +68,6 @@ fn set_new_protocol_owner(amm_config: &mut Account<AmmConfig>, new_owner: Pubkey
 
 fn set_new_fund_owner(amm_config: &mut Account<AmmConfig>, new_fund_owner: Pubkey) -> Result<()> {
     require_keys_neq!(new_fund_owner, Pubkey::default());
-    #[cfg(feature = "enable-log")]
     msg!(
         "amm_config, old_fund_owner:{}, new_fund_owner:{}",
         amm_config.fund_owner.to_string(),

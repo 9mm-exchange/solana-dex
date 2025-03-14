@@ -2,6 +2,7 @@ import { program } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import {
   configProject,
+  initializeProject,
   setClusterConfig,
 } from "./scripts";
 
@@ -19,12 +20,9 @@ programCommand("amm-config").action(async (directory, cmd) => {
   await configProject();
 });
 
-programCommand("swap")
-  .option("-t, --token <string>", "token address")
-  .option("-a, --amount <number>", "swap amount")
-  .option("-s, --style <string>", "0: buy token, 1: sell token")
+programCommand("initialize")
   .action(async (directory, cmd) => {
-    const { env, keypair, rpc, token, amount, style } = cmd.opts();
+    const { env, keypair, rpc } = cmd.opts();
 
     console.log("Solana Cluster:", env);
     console.log("Keypair Path:", keypair);
@@ -32,22 +30,7 @@ programCommand("swap")
 
     await setClusterConfig(env, keypair, rpc);
 
-    if (token === undefined) {
-      console.log("Error token address");
-      return;
-    }
-
-    if (amount === undefined) {
-      console.log("Error swap amount");
-      return;
-    }
-
-    if (style === undefined) {
-      console.log("Error swap style");
-      return;
-    }
-
-    // await swap(new PublicKey(token), amount, style);
+    await initializeProject();
   });
 
 function programCommand(name: string) {
@@ -76,7 +59,6 @@ program.parse(process.argv);
 /*
 
 yarn script amm-config
-yarn script launch
-yarn script swap -t 22fBUWsqxkrKfypmJPUHhFmxuvXgaxVDAYDov37JPPvU -a 2000000000 -s 0
+yarn script initialize
 
 */

@@ -9,6 +9,7 @@ import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { RaydiumCpSwap } from "../target/types/raydium_cp_swap";
 import {
   createConfigTx,
+  initializeTx,
 } from "../lib/scripts";
 import { execTx } from "../lib/util";
 import {
@@ -16,6 +17,8 @@ import {
   TEST_TRADE_FEE_RATE,
   TEST_PROTOCOL_FEE_RATE,
   TEST_FUND_FEE_RATE,
+  TEST_INITIAL_AMOUNT_1,
+  TEST_INITIAL_AMOUNT_0,
 } from "../lib/constant";
 
 let solConnection: Connection = null;
@@ -77,46 +80,21 @@ export const configProject = async () => {
   await execTx(tx, solConnection, payer);
 };
 
-// export const launchToken = async () => {
-//   const tx = await launchTokenTx(
-//     TEST_DECIMALS,
-//     TEST_TOKEN_SUPPLY,
-//     TEST_VIRTUAL_RESERVES,
+export const initializeProject = async () => {
 
-//     //  metadata
-//     TEST_NAME,
-//     TEST_SYMBOL,
-//     TEST_URI,
+  const tx = await initializeTx(
+    payer,
+    payer.publicKey,
 
-//     payer.publicKey,
+    TEST_INDEX,
 
-//     solConnection,
-//     program
-//   );
+    TEST_INITIAL_AMOUNT_0,
+    TEST_INITIAL_AMOUNT_1,
 
-//   await execTx(tx, solConnection, payer);
-// };
+    solConnection,
+    program
+  );
 
-// export const swap = async (
-//   token: PublicKey,
+  await execTx(tx, solConnection, payer);
 
-//   amount: number,
-//   style: number
-// ) => {
-//   const tx = await swapTx(
-//     payer.publicKey,
-//     token,
-//     amount,
-//     style,
-//     solConnection,
-//     program
-//   );
-
-//   await execTx(tx, solConnection, payer);
-// };
-
-// export const withdraw = async (token: PublicKey) => {
-//   const tx = await withdrawTx(payer.publicKey, token, solConnection, program);
-
-//   await execTx(tx, solConnection, payer);
-// };
+}

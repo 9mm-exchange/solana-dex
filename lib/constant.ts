@@ -23,6 +23,8 @@ export const TEST_TRADE_FEE_RATE = 10;
 export const TEST_PROTOCOL_FEE_RATE = 1000;
 export const TEST_FUND_FEE_RATE = 25000;
 export const TEST_CREATE_FEE = 0;
+export const TEST_INITIAL_AMOUNT_0 = 1000000000;
+export const TEST_INITIAL_AMOUNT_1 = 1000000000;
 
 const cluster: Cluster = "devnet";
 
