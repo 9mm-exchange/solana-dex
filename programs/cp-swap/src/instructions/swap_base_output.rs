@@ -1,4 +1,5 @@
 use super::swap_base_input::Swap;
+use crate::constants::AUTH_SEED;
 use crate::curve::{calculator::CurveCalculator, TradeDirection};
 use crate::error::ErrorCode;
 use crate::states::*;
@@ -159,7 +160,7 @@ pub fn swap_base_output(
         ctx.accounts.output_token_program.to_account_info(),
         output_transfer_amount,
         ctx.accounts.output_token_mint.decimals,
-        &[&[crate::AUTH_SEED.as_bytes(), &[pool_state.auth_bump]]],
+        &[&[AUTH_SEED.as_bytes(), &[pool_state.auth_bump]]],
     )?;
 
     ctx.accounts.input_vault.reload()?;

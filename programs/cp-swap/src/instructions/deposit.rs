@@ -1,3 +1,4 @@
+use crate::constants::AUTH_SEED;
 use crate::curve::CurveCalculator;
 use crate::curve::RoundDirection;
 use crate::error::ErrorCode;
@@ -15,7 +16,7 @@ pub struct Deposit<'info> {
     /// CHECK: pool vault and lp mint authority
     #[account(
         seeds = [
-            crate::AUTH_SEED.as_bytes(),
+            AUTH_SEED.as_bytes(),
         ],
         bump,
     )]
@@ -194,7 +195,7 @@ pub fn deposit(
         ctx.accounts.lp_mint.to_account_info(),
         ctx.accounts.owner_lp_token.to_account_info(),
         lp_token_amount,
-        &[&[crate::AUTH_SEED.as_bytes(), &[pool_state.auth_bump]]],
+        &[&[AUTH_SEED.as_bytes(), &[pool_state.auth_bump]]],
     )?;
 
     Ok(())

@@ -1,7 +1,8 @@
+use crate::constants::{AUTH_SEED, ADMIN};
 use crate::error::ErrorCode;
 use crate::states::*;
 use crate::utils::token::*;
-use crate::ADMIN;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::Mint;
@@ -16,7 +17,7 @@ pub struct CollectFundFee<'info> {
     /// CHECK: pool vault and lp mint authority
     #[account(
         seeds = [
-            crate::AUTH_SEED.as_bytes(),
+            AUTH_SEED.as_bytes(),
         ],
         bump,
     )]
@@ -100,7 +101,7 @@ pub fn collect_fund_fee(
         },
         amount_0,
         ctx.accounts.vault_0_mint.decimals,
-        &[&[crate::AUTH_SEED.as_bytes(), &[auth_bump]]],
+        &[&[AUTH_SEED.as_bytes(), &[auth_bump]]],
     )?;
 
     transfer_from_pool_vault_to_user(
@@ -115,7 +116,7 @@ pub fn collect_fund_fee(
         },
         amount_1,
         ctx.accounts.vault_1_mint.decimals,
-        &[&[crate::AUTH_SEED.as_bytes(), &[auth_bump]]],
+        &[&[AUTH_SEED.as_bytes(), &[auth_bump]]],
     )?;
 
     Ok(())

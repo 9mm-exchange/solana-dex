@@ -1,3 +1,4 @@
+pub mod constants;
 pub mod curve;
 pub mod error;
 pub mod instructions;
@@ -10,9 +11,9 @@ use instructions::*;
 
 declare_id!("DGKSWymjmoE5G4SJeNdLkepX2PxjQB2pWeuS68dYtw26");
 
-pub const ADMIN: Pubkey = pubkey!("H7YMxhKgLw2NDM9WQnpcUefPvCaLJCCYYaq1ETLHXJuH");
+// pub const ADMIN: Pubkey = pubkey!("H7YMxhKgLw2NDM9WQnpcUefPvCaLJCCYYaq1ETLHXJuH");
 
-pub const AUTH_SEED: &str = "vault_and_lp_mint_auth_seed";
+// pub const AUTH_SEED: &str = "vault_and_lp_mint_auth_seed";
 
 #[program]
 pub mod raydium_cp_swap {

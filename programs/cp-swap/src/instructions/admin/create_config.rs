@@ -1,5 +1,7 @@
+use crate::constants::{AMM_CONFIG_SEED, ADMIN};
 use crate::error::ErrorCode;
-use crate::{states::*, ADMIN};
+use crate::states::*;
+
 use anchor_lang::prelude::*;
 use std::ops::DerefMut;
 

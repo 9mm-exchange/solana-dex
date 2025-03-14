@@ -1,4 +1,5 @@
-use crate::{states::*, ADMIN};
+use crate::states::*;
+use crate::constants::ADMIN;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]

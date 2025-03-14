@@ -1,5 +1,8 @@
 use std::ops::Deref;
 
+use crate::constants::{
+    AUTH_SEED, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED,
+};
 use crate::curve::CurveCalculator;
 use crate::error::ErrorCode;
 use crate::states::*;
@@ -28,7 +31,7 @@ pub struct Initialize<'info> {
     /// CHECK: pool vault and lp mint authority
     #[account(
         seeds = [
-            crate::AUTH_SEED.as_bytes(),
+            AUTH_SEED.as_bytes(),
         ],
         bump,
     )]
@@ -282,7 +285,7 @@ pub fn initialize(
         liquidity
             .checked_sub(lock_lp_amount)
             .ok_or(ErrorCode::InitLpAmountTooLess)?,
-        &[&[crate::AUTH_SEED.as_bytes(), &[ctx.bumps.authority]]],
+        &[&[AUTH_SEED.as_bytes(), &[ctx.bumps.authority]]],
     )?;
 
     pool_state.initialize(
