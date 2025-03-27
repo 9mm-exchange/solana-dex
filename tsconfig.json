@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES6",                          // Use a suitable ECMAScript version
+    "module": "CommonJS",                        // Node.js uses CommonJS by default
+    "strict": true,                              // Enable all strict type-checking options
+    "esModuleInterop": true,                     // Allow default imports from CommonJS modules
+    "skipLibCheck": true,                        // Skip type checking of all declaration files
+    "forceConsistentCasingInFileNames": true,    // Ensure that file imports are case-sensitive
+    "outDir": "./dist",                          // Redirect compiled JavaScript files to a directory
+    "rootDir": ".",                          // Specify the root directory of input files
+    "baseUrl": "./",                             // Base directory to resolve non-relative module names
+    "resolveJsonModule": true,                   // Enable importing JSON files
+    "sourceMap": true,                           // Generate corresponding .map files
+    "noImplicitAny": true                        // Raise error on expressions and declarations with an implied 'any' type
+  },
+  // "include": ["src"],                            // Specify directories to include in compilation
+  // "exclude": ["node_modules", "**/*.spec.ts"]    // Optionally exclude test files and node_modules
+}
