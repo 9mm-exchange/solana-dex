@@ -91,6 +91,10 @@ pub fn deposit(
     maximum_token_0_amount: u64,
     maximum_token_1_amount: u64,
 ) -> Result<()> {
+    msg!("lpToken amount: {}", lp_token_amount);
+    msg!("maxium token0 amount: {}", maximum_token_0_amount);
+    msg!("maxium token1 amount: {}", maximum_token_1_amount);
+
     let pool_id = ctx.accounts.pool_state.key();
     let pool_state = &mut ctx.accounts.pool_state.load_mut()?;
     if !pool_state.get_status_by_bit(PoolStatusBitIndex::Deposit) {
@@ -100,6 +104,9 @@ pub fn deposit(
         ctx.accounts.token_0_vault.amount,
         ctx.accounts.token_1_vault.amount,
     );
+    msg!("total token0 amount: {}", total_token_0_amount);
+    msg!("total token1 amount: {}", total_token_1_amount);
+
     let results = CurveCalculator::lp_tokens_to_trading_tokens(
         u128::from(lp_token_amount),
         u128::from(pool_state.lp_supply),
@@ -128,15 +135,21 @@ pub fn deposit(
             transfer_fee,
         )
     };
+    
+    // Token 0 Results
+    msg!("results.token_0_amount: {}", results.token_0_amount);
 
-    #[cfg(feature = "enable-log")]
     msg!(
-        "results.token_0_amount;{}, results.token_1_amount:{},transfer_token_0_amount:{},transfer_token_0_fee:{},
-            transfer_token_1_amount:{},transfer_token_1_fee:{}",
-        results.token_0_amount,
-        results.token_1_amount,
+        "transfer_token_0_amount: {}, transfer_token_0_fee: {}",
         transfer_token_0_amount,
-        transfer_token_0_fee,
+        transfer_token_0_fee
+    );
+
+    // Token 1 Results
+    msg!("results.token_1_amount: {}", results.token_1_amount);
+
+    msg!(
+        "transfer_token_1_amount: {}, transfer_token_1_fee: {}",
         transfer_token_1_amount,
         transfer_token_1_fee
     );
@@ -152,6 +165,10 @@ pub fn deposit(
         token_1_transfer_fee: transfer_token_1_fee,
         change_type: 0
     });
+    msg!("transfer token0 amount: {}", transfer_token_0_amount);
+    msg!("maximum token0 amount: {}", maximum_token_0_amount);
+    msg!("transfer token1 amount: {}", transfer_token_1_amount);
+    msg!("maximum token1 amount: {}", maximum_token_1_amount);
 
     if transfer_token_0_amount > maximum_token_0_amount
         || transfer_token_1_amount > maximum_token_1_amount

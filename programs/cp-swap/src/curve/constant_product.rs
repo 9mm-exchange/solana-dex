@@ -1,5 +1,7 @@
 //! The Uniswap invariantConstantProductCurve::
 
+use solana_program::msg;
+
 use crate::{
     curve::calculator::{RoundDirection, TradingTokenResult},
     utils::CheckedCeilDiv,
@@ -36,10 +38,15 @@ impl ConstantProductCurve {
     ) -> u128 {
         // (x + delta_x) * (y - delta_y) = x * y
         // delta_x = (x * delta_y) / (y - delta_y)
+        msg!("destination amount: {}", destinsation_amount);
+        msg!("swap source amount: {}", swap_source_amount);
+        msg!("swap destination amount: {}", swap_destination_amount);
         let numerator = swap_source_amount.checked_mul(destinsation_amount).unwrap();
+        msg!("numerator: {}", numerator);
         let denominator = swap_destination_amount
             .checked_sub(destinsation_amount)
             .unwrap();
+        msg!("denominator: {}", denominator);
         let (source_amount_swapped, _) = numerator.checked_ceil_div(denominator).unwrap();
         source_amount_swapped
     }

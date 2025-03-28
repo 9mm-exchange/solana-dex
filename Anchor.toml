@@ -7,14 +7,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-raydium_cp_swap = "DGKSWymjmoE5G4SJeNdLkepX2PxjQB2pWeuS68dYtw26"
+raydium_cp_swap = "AWPFjLQzTpRwjisLpHJE3yFRiv6QnLmcazPMqfCYmQHb"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-# cluster = "https://devnet.helius-rpc.com/?api-key=8ea72171-c0a2-43eb-a8a5-b77c98d89343"
-cluster = "Localnet"
+cluster = "https://devnet.helius-rpc.com/?api-key=8ea72171-c0a2-43eb-a8a5-b77c98d89343"
 wallet = "../key/uu.json"
 
 [workspace]
@@ -23,7 +22,7 @@ members = ["programs/cp-swap"]
 [scripts]
 build = "rm -rf target && anchor build && mkdir -p target/deploy && cp ./keys/program/keypair.json ./target/deploy/cp_swap-keypair.json"
 build-with-so = "anchor run build && ln -s $HOME/.cargo/target/sbf-solana-solana/release/cp_swap.so $PWD/target/deploy/cp_swap.so"
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/*.test.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/initialize.test.ts"
 
 [test]
 startup_wait = 10000

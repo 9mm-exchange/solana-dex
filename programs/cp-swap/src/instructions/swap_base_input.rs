@@ -140,7 +140,6 @@ pub fn swap_base_input(ctx: Context<Swap>, amount_in: u64, minimum_amount_out: u
     let constant_after = u128::from(result.new_swap_source_amount)
         .checked_mul(u128::from(result.new_swap_destination_amount))
         .unwrap();
-    #[cfg(feature = "enable-log")]
     msg!(
         "source_amount_swapped:{}, destination_amount_swapped:{},constant_before:{},constant_after:{}",
         result.source_amount_swapped,
@@ -253,3 +252,4 @@ pub fn swap_base_input(ctx: Context<Swap>, amount_in: u64, minimum_amount_out: u
 
     Ok(())
 }
+

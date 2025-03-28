@@ -20,11 +20,15 @@ pub fn swap_base_output(
     {
         return err!(ErrorCode::NotApproved);
     }
+    msg!("pool id: {}", pool_id);
+
     let out_transfer_fee = get_transfer_inverse_fee(
         &ctx.accounts.output_token_mint.to_account_info(),
         amount_out_less_fee,
     )?;
+    msg!("🚀 ~ out_transfer_fee: {}", out_transfer_fee);
     let actual_amount_out = amount_out_less_fee.checked_add(out_transfer_fee).unwrap();
+    msg!("actual amount out: {}", actual_amount_out);
 
     // Calculate the trade amounts
     let (trade_direction, total_input_token_amount, total_output_token_amount) =
@@ -77,14 +81,11 @@ pub fn swap_base_output(
         .checked_mul(u128::from(result.new_swap_destination_amount))
         .unwrap();
 
-    #[cfg(feature = "enable-log")]
-    msg!(
-        "source_amount_swapped:{}, destination_amount_swapped:{},constant_before:{},constant_after:{}",
-        result.source_amount_swapped,
-        result.destination_amount_swapped,
-        constant_before,
-        constant_after
-    );
+    msg!("source_amount_swapped: {}", result.source_amount_swapped);
+    msg!("destination_amount_swapped: {}", result.destination_amount_swapped);
+    msg!("constant_before: {}", constant_before);
+    msg!("constant_after: {}", constant_after);
+
     require_gte!(constant_after, constant_before);
 
     // Re-calculate the source amount swapped based on what the curve says

@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::constants::{
-    AUTH_SEED, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED,
+    AUTH_SEED, OBSERVATION_SEED, POOL_LP_MINT_SEED, POOL_SEED, POOL_VAULT_SEED
 };
 use crate::curve::CurveCalculator;
 use crate::error::ErrorCode;
@@ -123,6 +123,7 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub token_1_vault: UncheckedAccount<'info>,
+    
     /// an account to store oracle observations
     #[account(
         init,
@@ -156,6 +157,12 @@ pub fn initialize(
     init_amount_1: u64,
     mut open_time: u64,
 ) -> Result<()> {
+    msg!("initialize");
+    msg!(
+        "init_amount0: {}, init_amount1: {}",
+        init_amount_0,
+        init_amount_1
+    );
     if !(is_supported_mint(&ctx.accounts.token_0_mint).unwrap()
         && is_supported_mint(&ctx.accounts.token_1_mint).unwrap())
     {
@@ -169,6 +176,10 @@ pub fn initialize(
     if open_time <= block_timestamp {
         open_time = block_timestamp + 1;
     }
+    msg!("open time: {}", open_time);
+    msg!("creator: {}", &ctx.accounts.creator.key());
+    msg!("token mint: {}", &ctx.accounts.lp_mint.key());
+    msg!("creator lp mint: {}", &ctx.accounts.creator_lp_token.key());
     // due to stack/heap limitations, we have to create redundant new accounts ourselves.
     let ix = create_associated_token_account_idempotent(
         &ctx.accounts.creator.key(),
@@ -176,6 +187,7 @@ pub fn initialize(
         &ctx.accounts.lp_mint.key(),
         &ctx.accounts.token_program.key(),
     );
+    msg!("1");
     invoke(
         &ix,
         &[
@@ -187,7 +199,7 @@ pub fn initialize(
             ctx.accounts.token_program.to_account_info(),
         ],
     )?;
-
+    msg!("token0 create");
     create_token_account(
         &ctx.accounts.authority.to_account_info(),
         &ctx.accounts.creator.to_account_info(),
@@ -202,7 +214,7 @@ pub fn initialize(
             &[ctx.bumps.token_0_vault][..],
         ][..]],
     )?;
-
+    msg!("token1 create");
     create_token_account(
         &ctx.accounts.authority.to_account_info(),
         &ctx.accounts.creator.to_account_info(),
@@ -270,13 +282,13 @@ pub fn initialize(
         .integer_sqrt()
         .as_u64();
     let lock_lp_amount = 100;
-    msg!(
-        "liquidity:{}, lock_lp_amount:{}, vault_0_amount:{},vault_1_amount:{}",
-        liquidity,
-        lock_lp_amount,
-        token_0_vault.amount,
-        token_1_vault.amount
-    );
+    msg!("liquidity: {}", liquidity);
+    msg!("lock lp amount: {}", lock_lp_amount);
+    msg!("token0 vault amount: {}", token_0_vault.amount);
+    msg!("token1 vault amount: {}", token_1_vault.amount);
+
+    msg!("authority: {}", ctx.accounts.authority.key());
+    msg!("autority: {}", ctx.bumps.authority);
     token::token_mint_to(
         ctx.accounts.authority.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
@@ -287,6 +299,7 @@ pub fn initialize(
             .ok_or(ErrorCode::InitLpAmountTooLess)?,
         &[&[AUTH_SEED.as_bytes(), &[ctx.bumps.authority]]],
     )?;
+    msg!("initialize");
 
     pool_state.initialize(
         ctx.bumps.authority,
@@ -301,6 +314,16 @@ pub fn initialize(
         &ctx.accounts.lp_mint,
         ctx.accounts.observation_state.key(),
     );
+
+    emit!(CreatePoolEvent {
+        pool_id: ctx.accounts.pool_state.key(),
+        token_0_mint: ctx.accounts.token_0_mint.key(),
+        token_1_mint: ctx.accounts.token_1_mint.key(),
+        token_0_amount: token_0_vault.amount,
+        token_1_amount: token_1_vault.amount,
+        lp_mint: ctx.accounts.lp_mint.key(),
+        liquidity: liquidity
+    });
 
     Ok(())
 }
