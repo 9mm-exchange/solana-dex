@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import newsRouter from './routes/newsRouter'
-import authRouter from './routes/authRouter'
-import scoreRouter from './routes/scoreRouter'
+import authRouter from './src/routes/authRouter'
 
 const app = express();
 
@@ -12,10 +10,6 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({message: "running"});
 });
-
-app.use('/api/score', scoreRouter);
-
-app.use('/api/news', newsRouter)
 
 app.use('/api/auth', authRouter)
 
