@@ -21,7 +21,7 @@ router.post("/", async (req, res) => {
   const { body } = req;
 
   const UserSchema = Joi.object().keys({
-    name: Joi.string().required(),
+    // name: Joi.string().required(),
     wallet: Joi.string().required(),
     isLedger: Joi.boolean().required(),
   });
@@ -48,7 +48,7 @@ router.post("/", async (req, res) => {
       const nonce = crypto.randomBytes(8).toString("hex");
 
       const newPendingUser = new PendingUser({
-        name: body.name,
+        // name: body.name,
         wallet,
         nonce,
         isLedger: body.isLedger,
@@ -90,7 +90,7 @@ router.post("/login", async (req, res) => {
       const token = jwt.sign(
         {
           id: user._id,
-          name: user.name,
+          // name: user.name,
           wallet,
         },
         "secret",
@@ -112,7 +112,7 @@ router.post("/login", async (req, res) => {
 router.post("/confirm", async (req, res) => {
   console.log("req.body:::", req.body);
   const body = {
-    name: req.body.name,
+    // name: req.body.name,
     wallet: req.body.wallet,
     isLedger: req.body.isLedger,
     signature: req.body.signature,
@@ -121,7 +121,7 @@ router.post("/confirm", async (req, res) => {
   console.log("body", body);
   // Validate form
   const UserSchema = Joi.object().keys({
-    name: Joi.string().required(),
+    // name: Joi.string().required(),
     wallet: Joi.string().required(),
     nonce: Joi.string().required(),
     signature: Joi.string().required(),
@@ -189,7 +189,7 @@ router.post("/confirm", async (req, res) => {
       }
     }
     const userData = {
-      name: body.name,
+      // name: body.name,
       wallet: body.wallet,
     };
     const newUser = new User(userData);
@@ -206,7 +206,7 @@ router.post("/update/:id", async (req, res) => {
   const userId = req.params.id;
   // Validate form
   const UserSchema = Joi.object().keys({
-    name: Joi.string().required(),
+    // name: Joi.string().required(),
     wallet: Joi.string().required(),
     avatar: Joi.string().required(),
   });
@@ -264,13 +264,13 @@ router.get("/wallet/:wallet", async (req, res) => {
 export default router;
 
 export interface UserInfo {
-  name: string;
+  // name: string;
   wallet: string;
   avatar?: string;
 }
 
 export interface PendingUserInfo {
-  name: string;
+  // name: string;
   wallet: string;
   nonce: string;
 }
