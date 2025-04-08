@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 
 const pendingUserSchema = new mongoose.Schema({
-  name: { type: String, required: true, },
+  // name: { type: String, required: true, },
   wallet: { type: String, required: true,},
   nonce: { type: String, required: true},
   isLedger:{type:Boolean, required: true},
