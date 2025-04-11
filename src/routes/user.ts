@@ -8,6 +8,7 @@ import base58 from "bs58";
 import nacl from "tweetnacl";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import jwt from "jsonwebtoken";
+import Token from '../models/Token';
 
 const router = express.Router();
 
@@ -258,6 +259,61 @@ router.get("/wallet/:wallet", async (req, res) => {
     return res.status(200).send(user);
   } catch (error) {
     return res.status(500).send(error);
+  }
+});
+
+router.post("/addToken", async (req, res) => {
+  try {
+    const { token, wallet } = req.body;
+    console.log("🚀 ~ addToken:", token);
+    console.log("🚀 ~ addToken:", wallet)
+
+    // Validate token data
+    if (!token || !token.address || !token.symbol || !token.name || !token.img || !wallet) {
+      return res.status(400).json({ error: "Invalid token data" });
+    }
+    
+    // Check if token already exists
+    const existingToken = await Token.findOne({ 
+      address: token.address,
+      addedBy: wallet 
+    });
+    console.log("🚀 ~ router.post ~ existingToken:", existingToken)
+    if (existingToken) {
+      return res.status(400).json({ error: "Token already exists in the list" });
+    }
+
+    // Create new token
+    const newToken = new Token({
+      address: token.address,
+      symbol: token.symbol,
+      name: token.name,
+      image: token.img,
+      addedBy: wallet
+    });
+
+    await newToken.save();
+    return res.status(200).json({ message: "Token added successfully", token: newToken });
+  } catch (error) {
+    console.error("Error adding token:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/getCustomList", async (req, res) => {
+  try {
+    const { wallet } = req.body;
+    console.log("🚀 ~ router.get ~ wallet:", wallet)
+
+    if (!wallet) {
+      return res.status(400).json({ error: "Wallet address is required" });
+    }
+
+    const tokens = await Token.find({ addedBy: wallet });
+    res.status(200).json(tokens);
+  } catch (error) {
+    console.error("Error fetching user tokens:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

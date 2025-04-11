@@ -6,9 +6,9 @@ const router = express.Router();
 
 router.get("/", async (req: any, res: any) => {
     try {
-          
+        console.log("tokenListRouter");
     } catch (error) {
-        
+        console.log("tokenListRouter error", error);
     }
 })
 

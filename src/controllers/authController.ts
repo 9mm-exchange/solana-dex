@@ -9,30 +9,40 @@ dotenv.config();
 
 // Register User
 export const registerUser = async (req: Request, res: Response) => {
-  const { userName, email, password, googleId } = req.body;
+  const { userName, email, password, googleId, wallet } = req.body;
 
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists by email or wallet
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email },
+        { wallet: wallet }
+      ]
+    });
+
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
-
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create a new user
     const newUser = new User({
       userName,
       email,
-      password: hashedPassword,
-      googleId
+      password: password ? await bcrypt.hash(password, 10) : undefined,
+      googleId,
+      wallet
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: 'User registered successfully' });
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: newUser._id, wallet: newUser.wallet },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({ token, user: { wallet: newUser.wallet, avatar: newUser.avatar } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -41,27 +51,37 @@ export const registerUser = async (req: Request, res: Response) => {
 
 // Login User
 export const loginUser = async (req: Request, res: Response) => {
-  const { email, password, googleId } = req.body;
+  const { email, password, wallet } = req.body;
 
   try {
-    // Check if user exists
-    const user = await User.findOne({ email });
+    // Find user by email or wallet
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { wallet: wallet }
+      ]
+    });
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check if password is correct
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    // If password is provided, verify it
+    if (password && user.password) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+      }
     }
 
     // Create JWT token
-    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET as string, {
-      expiresIn: '1h'
-    });
+    const token = jwt.sign(
+      { userId: user._id, wallet: user.wallet },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '1h' }
+    );
 
-    res.status(200).json({ token });
+    res.status(200).json({ token, user: { wallet: user.wallet, avatar: user.avatar } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

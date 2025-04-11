@@ -19,14 +19,17 @@ import { Metaplex } from "@metaplex-foundation/js";
 import {
   CpiGuardLayout,
   getAssociatedTokenAddressSync,
-  NATIVE_MINT
+  NATIVE_MINT,
+  TOKEN_2022_PROGRAM_ID
 } from "@solana/spl-token";
+import { checkTokenStandard } from "../utils/util";
 import { execTx } from "../utils/util";
 import PoolModel from "../models/Pool";
 import { lpDecimal } from "../utils/constant";
 import PoolStatus from "../models/PoolStatus";
 import { getSolPriceInUSD } from "../utils/getSolPriceInUsd";
 import LiquidityStatus from "../models/LiquidityStatus";
+import Token2022 from "../models/Token2022";
 
 require("dotenv").config();
 
@@ -66,55 +69,86 @@ const handleCreatePoolEvent = async (event: any) => {
     const lpMint = event.lpMint.toString();
     const liquidity = event.liquidity.toNumber();
 
-    const solPriceInUSD = parseFloat(await getSolPriceInUSD());
-
+    // Create new pool in database
     const newPool = new PoolModel({
-      creator: creator,
-      liquidity: liquidity,
-      lpMint: lpMint,
-      poolAddress: poolAddress,
-      token0Mint: token0Mint,
-      token1Mint: token1Mint,
-      token0Amount: token0Amount,
-      token1Amount: token1Amount
+      poolAddress,
+      creator,
+      token0Mint,
+      token1Mint,
+      token0Amount: token0Amount.toString(),
+      token1Amount: token1Amount.toString(),
+      lpMint,
+      liquidity: liquidity.toString(),
+      volume24h: '0',
+      createdAt: new Date()
     });
-    const response = await newPool.save();
-    console.log("🚀 ~ handleCreatePoolEvent ~ response:", response);
 
+    await newPool.save();
+    console.log("Pool created successfully:", newPool);
+
+    // Create initial token2022 status
+    const tokenStandard = await checkTokenStandard(token0Mint)
+    console.log("🚀 ~ handleCreatePoolEvent ~ tokenStandard:", tokenStandard)
+    if (tokenStandard === TOKEN_2022_PROGRAM_ID) {
+      const newToken2022 = new Token2022({
+        mint: token0Mint,
+        creator: creator,
+        createdAt: new Date()
+      });
+      const existingToken2022 = await Token2022.findOne({ mint: token0Mint });
+      if (!existingToken2022) {
+        await newToken2022.save();
+        console.log("Token2022 created successfully:", await newToken2022.save());
+      }
+    } else {
+      const newToken2022 = new Token2022({
+        mint: token1Mint,
+        creator: creator,
+        createdAt: new Date()
+      });
+      const existingToken2022 = await Token2022.findOne({ mint: token1Mint });
+      if (!existingToken2022) {
+        await newToken2022.save();
+        console.log("Token2022 created successfully:", await newToken2022.save());
+      }
+    }
+    // Create initial pool status
     const newPoolStatus = new PoolStatus({
-      poolId: response._id,
-      record: [
-        {
-          holder: response.creator,
-          holdingStatus: 0,
-          amount: 0,
-          tx: "txId"
-        }
-      ]
+      poolId: newPool._id,
+      record: [{
+        holder: creator,
+        holdingStatus: 0,
+        amount: 0,
+        tx: "initial"
+      }]
     });
     await newPoolStatus.save();
-    console.log(await newPoolStatus.save());
 
-    const newLiquidyStatus = new LiquidityStatus({
-      poolId: response._id,
+    // Create initial liquidity status
+    const newLiquidityStatus = new LiquidityStatus({
+      poolId: newPool._id,
       record: {
-        holder: response.creator,
-        totalLiquidity: liquidity,
-        tx: "txId"
+        holder: creator,
+        totalLiquidity: liquidity.toString(),
+        tx: "initial"
       }
-    })
-    await newLiquidyStatus.save();
-    console.log(await newLiquidyStatus.save());
-    
+    });
+    await newLiquidityStatus.save();
+
+    // Emit pool created event
     const date = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit"
     });
-    if (io != null)
-      io.emit("PoolCreated", poolAddress, event.creator.toBase58(), date);
+
+    if (io) {
+      io.emit("PoolCreated", poolAddress, creator, date);
+    }
+
   } catch (error) {
-    console.log("Create Pool error: ", error);
+    console.error("Error handling create pool event:", error);
+    logger.error("Error handling create pool event:", error);
   }
 };
 

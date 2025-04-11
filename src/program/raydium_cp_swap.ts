@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/raydium_cp_swap.json`.
  */
 export type RaydiumCpSwap = {
-  "address": "EpGVzr4EEx9urAXgdijZcgumhjAC6CG54gBL9hNdqNRe",
+  "address": "7QLzPUCeRzCvXNMQshV2ehmPG3jTZXPkAANCjaSeKN4V",
   "metadata": {
     "name": "raydiumCpSwap",
     "version": "0.1.1",
@@ -2044,14 +2044,14 @@ export type RaydiumCpSwap = {
           {
             "name": "inputAmount",
             "docs": [
-              "cacluate result without transfer fee"
+              "calcluate result without transfer fee"
             ],
             "type": "u64"
           },
           {
             "name": "outputAmount",
             "docs": [
-              "cacluate result without transfer fee"
+              "calcluate result without transfer fee"
             ],
             "type": "u64"
           },

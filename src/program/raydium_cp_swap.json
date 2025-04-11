@@ -1,5 +1,5 @@
 {
-  "address": "EpGVzr4EEx9urAXgdijZcgumhjAC6CG54gBL9hNdqNRe",
+  "address": "7QLzPUCeRzCvXNMQshV2ehmPG3jTZXPkAANCjaSeKN4V",
   "metadata": {
     "name": "raydium_cp_swap",
     "version": "0.1.1",
@@ -2038,14 +2038,14 @@
           {
             "name": "input_amount",
             "docs": [
-              "cacluate result without transfer fee"
+              "calcluate result without transfer fee"
             ],
             "type": "u64"
           },
           {
             "name": "output_amount",
             "docs": [
-              "cacluate result without transfer fee"
+              "calcluate result without transfer fee"
             ],
             "type": "u64"
           },

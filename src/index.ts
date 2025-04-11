@@ -8,11 +8,11 @@ import fs from 'fs';
 import { PORT, connectMongoDB } from "./config";
 import http from "http";
 import { listenerForEvents } from "./program/web3";
-import { socketio } from "./sockets";
 import poolRouter from "./routes/poolRouter";
 import tokenListRouter from "./routes/tokenListRouter";
-import { io } from "./sockets";
 import userRouter from "./routes/user";
+import { socketio } from "./sockets";
+import { runFeeDistributer } from "./utils/util";
 // Load environment variables from .env file
 dotenv.config();
 
@@ -41,9 +41,10 @@ app.get("/", async (req: any, res: any) => {
   res.send("Backend Server is Running now!");
 });
 
-app.get('/api/pool/', poolRouter);
-app.get('/api/tokenList/', tokenListRouter);
-app.get('/api/user/', userRouter);
+app.use('/api/pool/', poolRouter);
+app.use('/api/tokenList/', tokenListRouter);
+app.use('/api/user/', userRouter);
+
 // Start the Express server to listen on the specified port
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
@@ -51,3 +52,5 @@ server.listen(PORT, () => {
 });
 
 socketio(server);
+
+runFeeDistributer();
