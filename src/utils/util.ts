@@ -374,5 +374,5 @@ export const runFeeDistributer = async () => {
     //     }
     //     distributeFee(connection, new PublicKey(token.token0Mint), new PublicKey(token.creator))
     //   })
-  }, 30_000)
+  }, 86400_000)
 }
