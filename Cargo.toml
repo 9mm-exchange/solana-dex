@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "programs/*",
+    "sdk"
 ]
 
 [profile.release]

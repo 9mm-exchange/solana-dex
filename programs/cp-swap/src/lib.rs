@@ -9,7 +9,7 @@ use crate::curve::fees::FEE_RATE_DENOMINATOR_VALUE;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("AWPFjLQzTpRwjisLpHJE3yFRiv6QnLmcazPMqfCYmQHb");
+declare_id!("zA5ZHGX7vw2mAyRZMqVfqauXp7TMswLW4fnLyxbrfvX");
 
 // pub const ADMIN: Pubkey = pubkey!("H7YMxhKgLw2NDM9WQnpcUefPvCaLJCCYYaq1ETLHXJuH");
 
