@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 
 /// Emitted when deposit and withdraw
+
 #[event]
+#[cfg_attr(feature = "sdk", derive(Debug))]
 pub struct LpChangeEvent {
     #[index]
     pub pool_id: Pubkey,
@@ -22,6 +24,7 @@ pub struct LpChangeEvent {
 
 /// Emitted when swap
 #[event]
+#[cfg_attr(feature = "sdk", derive(Debug))]
 pub struct SwapEvent {
     #[index]
     pub pool_id: Pubkey,
@@ -38,6 +41,7 @@ pub struct SwapEvent {
     pub base_input: bool,
 }
 #[event]
+#[cfg_attr(feature = "sdk", derive(Debug))]
 pub struct CreatePoolEvent {
     #[index]
     pub pool_id: Pubkey,

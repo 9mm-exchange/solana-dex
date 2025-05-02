@@ -16,7 +16,7 @@ cpi = ["no-entrypoint"]
 default = ["devnet"]
 enable-log = []
 devnet = []
-client = []
+sdk = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
