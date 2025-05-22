@@ -13,7 +13,6 @@ import UserContext from '../../context/UserContext';
 import { TokenData } from '../../types';
 import { BACKEND_URL } from '../../utils/util';
 import { errorAlert, successAlert } from '../ui/ToastGroup';
-// import UserContext from '@/context/UserContext';
 // import { Spinner } from '../Spinner';
 
 interface SelectTokenModalProps {
@@ -208,12 +207,10 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
   }, [menuDropdown]);
 
   const popularTokens = useMemo(() => {
-    // Filter and remove duplicates by using a Set based on the 'id'
     const filteredTokens = defaultTokens.filter(token =>
       ['USDe', 'TRX', 'APT', 'WLD'].includes(token.id)
     );
   
-    // Remove duplicates by using the `id` of the token
     const uniqueTokens = Array.from(new Map(filteredTokens.map(token => [token.id, token])).values());
   
     return uniqueTokens;
@@ -276,7 +273,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
   
           {/* Token List */}
           <div className="overflow-y-auto flex-grow -mx-2 px-2">
-                {filteredTokens.length === 0 ? (
+                {/* {filteredTokens.length === 0 ? (
                     <div className="py-8 text-center text-gray-500 dark:text-gray-400">
                       <Search size={40} className="mx-auto mb-2 text-gray-300" />
                       <p>No tokens found</p>
@@ -289,7 +286,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
                         </button>
                       )}
                     </div>
-                  ) : (
+                  ) : ( */}
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
 
                 {filteredTokens.map((token, index) => (
@@ -325,45 +322,47 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
                     </div>
                   </button>
                 ))}
+
+                {searchQuery && filteredTokens.length < 3 && (
+                  <div className='flex flex-col items-center justify-center p-2 gap-4'>
+                    <div className='flex flex-row items-center justify-between gap-3 w-full'>
+                      <p className='text-white w-24'>Name:</p>
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        className={`bg-gray-900 w-full text-white outline-none p-2 ${isMetadataFetched ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        value={newTokenName}
+                        onChange={(e) => setNewTokenName(e.target.value)}
+                        disabled={isMetadataFetched}
+                      />
+                    </div>
+
+                    <div className='flex flex-row items-center justify-between gap-3 w-full'>
+                      <p className='text-white w-24'>Symbol:</p>
+                      <input
+                        type="text"
+                        placeholder="Symbol"
+                        className={`bg-gray-900 w-full text-white outline-none p-2 ${isMetadataFetched ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        value={newTokenSymbol}
+                        onChange={(e) => setNewTokenSymbol(e.target.value)}
+                        disabled={isMetadataFetched}
+                      />
+                    </div>
+
+                    <div
+                      className={`flex flex-row items-center justify-center p-3 bg-slate-900 rounded-md hover:bg-slate-600 transition-colors mt-2 ${filteredTokens.length !== 0 ? "bg-slate-900 cursor-not-allowed" : "bg-slate-800 cursor-pointer"}`}
+                      onClick={ filteredTokens.length !== 0 ? undefined : handleAddToken}
+                    >
+                      <span className={`${filteredTokens.length !== 0 ? "text-gray-400" : "text-white"}`}>Add to token list</span>
+                    </div>
+                  </div>
+                )} 
               </div>
-            )}
+            {/* )} */}
           </div>
         </div>
       </div>
-          {/* {searchQuery && filteredTokens.length < 3 && (
-            <div className='flex flex-col items-center justify-center p-2 gap-4'>
-              <div className='flex flex-row items-center justify-between gap-3 w-full'>
-                <p className='text-white w-24'>Name:</p>
-                <input
-                  type="text"
-                  placeholder="Name"
-                  className={`bg-gray-900 w-full text-white outline-none p-2 ${isMetadataFetched ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  value={newTokenName}
-                  onChange={(e) => setNewTokenName(e.target.value)}
-                  disabled={isMetadataFetched}
-                />
-              </div>
-
-              <div className='flex flex-row items-center justify-between gap-3 w-full'>
-                <p className='text-white w-24'>Symbol:</p>
-                <input
-                  type="text"
-                  placeholder="Symbol"
-                  className={`bg-gray-900 w-full text-white outline-none p-2 ${isMetadataFetched ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  value={newTokenSymbol}
-                  onChange={(e) => setNewTokenSymbol(e.target.value)}
-                  disabled={isMetadataFetched}
-                />
-              </div>
-
-              <div
-                className={`flex flex-row items-center justify-center p-3 bg-slate-900 rounded-md hover:bg-slate-600 transition-colors mt-2 ${filteredTokens.length !== 0 ? "bg-slate-900 cursor-not-allowed" : "bg-slate-800 cursor-pointer"}`}
-                onClick={ filteredTokens.length !== 0 ? undefined : handleAddToken}
-              >
-                <span className={`${filteredTokens.length !== 0 ? "text-gray-400" : "text-white"}`}>Add to token list</span>
-              </div>
-            </div>
-          )} */}
+          
     </>
   );
 };
