@@ -1,5 +1,5 @@
 {
-  "address": "7QLzPUCeRzCvXNMQshV2ehmPG3jTZXPkAANCjaSeKN4V",
+  "address": "4n1Yh7moT84og34yUnrsaBiQ2Mc7j2k28fu9ioBa7xb1",
   "metadata": {
     "name": "raydium_cp_swap",
     "version": "0.1.1",
@@ -657,10 +657,16 @@
           }
         },
         {
-          "name": "token_0_mint"
+          "name": "token_0_mint",
+          "docs": [
+            "Token_0 mint, the key must smaller then token_1 mint."
+          ]
         },
         {
-          "name": "token_1_mint"
+          "name": "token_1_mint",
+          "docs": [
+            "Token_1 mint, the key must grater then token_0 mint."
+          ]
         },
         {
           "name": "lp_mint",
@@ -1650,6 +1656,10 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
             "name": "pool_id",
             "type": "pubkey"
           },
@@ -1676,10 +1686,6 @@
           {
             "name": "liquidity",
             "type": "u64"
-          },
-          {
-            "name": "creator",
-            "type": "pubkey"
           }
         ]
       }
@@ -1695,14 +1701,6 @@
           {
             "name": "pool_id",
             "type": "pubkey"
-          },
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
-          {
-            "name": "lp_amount_in",
-            "type": "u64"
           },
           {
             "name": "lp_amount_before",
@@ -2018,10 +2016,6 @@
             "type": "pubkey"
           },
           {
-            "name": "user",
-            "type": "pubkey"
-          },
-          {
             "name": "input_vault_before",
             "docs": [
               "pool vault sub trade fees"
@@ -2038,14 +2032,14 @@
           {
             "name": "input_amount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },
           {
             "name": "output_amount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },

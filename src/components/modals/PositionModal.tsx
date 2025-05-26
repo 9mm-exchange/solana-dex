@@ -1,26 +1,6 @@
 import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-
-interface PositionData {
-  vol: string;
-  liquidity: string;
-  address: string;
-  lpMint: string;
-  quoteToken?: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-    amount?: string;
-  };
-  baseToken?: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-    amount?: string;
-  };
-}
+import { PositionData } from '../../types';
 
 interface PositionModalProps {
   positions: PositionData[];
@@ -50,26 +30,24 @@ const PositionModal: React.FC<PositionModalProps> = ({ positions, onSelect, onCl
     const query = searchQuery.toLowerCase();
 
     const filtered = positions.filter((position) => {
-      const quoteSymbol = position.quoteToken?.symbol?.toLowerCase() || '';
-      const baseSymbol = position.baseToken?.symbol?.toLowerCase() || '';
+      const token0Symbol = position.token0?.symbol?.toLowerCase() || '';
+      const token1Symbol = position.token1?.symbol?.toLowerCase() || '';
       const address = position.address?.toLowerCase() || '';
-      const quoteName = position.quoteToken?.name?.toLowerCase() || '';
-      const baseName = position.baseToken?.name?.toLowerCase() || '';
+      const token0Name = position.token0?.name?.toLowerCase() || '';
+      const token1Name = position.token1?.name?.toLowerCase() || '';
 
       return (
-        quoteSymbol.includes(query) ||
-        baseSymbol.includes(query) ||
-        `${quoteSymbol}/${baseSymbol}`.includes(query) ||
+        token0Symbol.includes(query) ||
+        token1Symbol.includes(query) ||
+        `${token0Symbol}/${token1Symbol}`.includes(query) ||
         address.includes(query) ||
-        quoteName.includes(query) ||
-        baseName.includes(query)
+        token0Name.includes(query) ||
+        token1Name.includes(query)
       );
     });
 
     setFilteredPools(filtered);
   }, [searchQuery, positions]);
-
-  
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -110,36 +88,34 @@ const PositionModal: React.FC<PositionModalProps> = ({ positions, onSelect, onCl
                 onClick={() => onSelect(position)}
                 className={`w-full p-3 text-left rounded-lg transition-colors border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700`}
               >
-                {position.quoteToken && position.baseToken && (
+                {position.token0 && position.token1 && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="flex -space-x-2 mr-3">
                         <img
-                              src={position.quoteToken.image}
-                              alt={position.quoteToken.symbol}
-                              className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                          src={position.token0.image}
+                          alt={position.token0.symbol}
+                          className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
                         />
                         <img
-                              src={position.baseToken.image}
-                              alt={position.baseToken.symbol}
-                              className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                          src={position.token1.image}
+                          alt={position.token1.symbol}
+                          className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
                         />
+                      </div>
+                      <div>
+                        <div className="font-medium">{position.token0.symbol}/{position.token1.symbol}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {position.token0.amount || '0'} {position.token0.symbol} + {position.token1.amount || '0'} {position.token1.symbol}
                         </div>
-                        <div>
-                          <div className="font-medium">{position.quoteToken.symbol}/{position.baseToken.symbol}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">1.5 {position.quoteToken.symbol} + 187.50 {position.baseToken.symbol}</div>
-                          </div>
-                          </div>
+                      </div>
+                    </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium">1.5 LP</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">≈ $376.13</div>
+                      <div className="text-sm font-medium">{position.liquidity} LP</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">≈ ${position.vol}</div>
                     </div>
                   </div>
                 )}
-                {/* <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {position.liquidity}
-                </div> */}
-                
               </button>
             ))
           )}

@@ -37,6 +37,9 @@ export async function calculateLpAmountForDeposit(
   token1Amount: BN,
   poolAddress: PublicKey,
 ): Promise<BN> {
+  console.log("🚀 ~ calculateLpAmountForDeposit ~ token0Amount:", token0Amount.toNumber())
+  console.log("🚀 ~ calculateLpAmountForDeposit ~ token1Amount:", token1Amount.toNumber())
+  console.log("🚀 ~ calculateLpAmountForDeposit ~ poolAddress:", poolAddress.toBase58())
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
   anchor.setProvider(provider);

@@ -22,20 +22,16 @@ import { getPoolList } from "../utils/getPoolList";
 const WithdrawLPNew: React.FC = () => {
   const wallet = useWallet();
   const { isLoading, setIsLoading } = useContext(UserContext);
-  const [quoteTokenData, setQuoteTokenData] = useState<TokenData | null>(null);
-  const [baseTokenData, setBaseTokenData] = useState<TokenData | null>(null);
+  const [token0Data, settoken0Data] = useState<TokenData | null>(null);
+  const [token1Data, setToken1Data] = useState<TokenData | null>(null);
   const [lpTokenData, setLpTokenData] = useState<TokenData | null>(null);
   const [quoteAmount, setQuoteAmount] = useState<number>(0);
   const [baseAmount, setBaseAmount] = useState<number>(0);
   const [lpTokenAmount, setlpTokenAmount] = useState<number>(0);
   const [selectTokenModalState, setSelectTokenModalState] = useState(false);
-  const [selectTokenState, setSelectTokenState] = useState<"quote" | "base">(
-    "quote"
-  );
+  const [selectTokenState, setSelectTokenState] = useState<"quote" | "base">("quote");
   const [showPositionModal, setShowPositionModal] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState<PositionData | null>(
-    null
-  );
+  const [selectedPosition, setSelectedPosition] = useState<PositionData | null>(null);
   const [quoteBalance, setQuoteBalance] = useState<number>(0);
   const [baseBalance, setBaseBalance] = useState<number>(0);
   const [lpBalance, setLpBalance] = useState<number>(0);
@@ -44,30 +40,30 @@ const WithdrawLPNew: React.FC = () => {
   const { showNotification } = useTransactionNotifications();
 
   const fetchBalance = async () => {
-    if (wallet.publicKey && quoteTokenData) {
+    if (wallet.publicKey && token0Data) {
       const sellBal = await getTokenBalance(
         wallet.publicKey.toBase58(),
-        quoteTokenData.address
+        token0Data.address
       );
       console.log("Sell balance: ", sellBal);
       setQuoteBalance(sellBal);
     }
-    if (wallet.publicKey && baseTokenData) {
+    if (wallet.publicKey && token1Data) {
       const buyBal = await getTokenBalance(
         wallet.publicKey.toBase58(),
-        baseTokenData.address
+        token1Data.address
       );
       console.log("Buy balance: ", buyBal);
       setBaseBalance(buyBal);
     }
-    if (wallet.publicKey && baseTokenData && quoteTokenData) {
-      console.log("🚀 ~ fetchBalance ~ quoteTokenData:", quoteTokenData);
-      console.log("🚀 ~ fetchBalance ~ baseTokenData:", baseTokenData);
+    if (wallet.publicKey && token1Data && token0Data) {
+      console.log("🚀 ~ fetchBalance ~ token0Data:", token0Data);
+      console.log("🚀 ~ fetchBalance ~ token1Data:", token1Data);
       console.log("------------------------");
       const lpMint = await getLpMint(
         wallet,
-        quoteTokenData.address,
-        baseTokenData.address
+        token0Data.address,
+        token1Data.address
       );
       if (lpMint) {
         const lpBal = await getTokenBalance(
@@ -81,6 +77,8 @@ const WithdrawLPNew: React.FC = () => {
           id: lpMint.toString().slice(0, 5),
           img: "https://swap.pump.fun/tokens/usde.webp",
           text: "lp",
+          name: "LP Token",
+          symbol: "LP"
         };
         console.log("🚀 ~ fetchBalance ~ newLp:", newLp);
         setLpTokenData(newLp);
@@ -90,7 +88,7 @@ const WithdrawLPNew: React.FC = () => {
 
   useEffect(() => {
     fetchBalance();
-  }, [wallet.publicKey, quoteTokenData, baseTokenData, selectedPosition]);
+  }, [wallet.publicKey, token0Data, token1Data, selectedPosition]);
 
   // Fetch pools on component mount
   useEffect(() => {
@@ -98,7 +96,17 @@ const WithdrawLPNew: React.FC = () => {
       try {
         const positionList = await getPoolList();
         console.log("🚀 ~ fetchPositions ~ positionList:", positionList);
-        setPositions(positionList);
+        // Transform the position list to match the PositionData interface
+        const transformedPositions = positionList.map(pool => ({
+          ...pool,
+          token0: pool.token0 || undefined,
+          token1: pool.token1 || undefined,
+          vol: pool.vol || '0',
+          liquidity: pool.liquidity || '0',
+          address: pool.address,
+          lpMint: pool.lpMint
+        }));
+        setPositions(transformedPositions);
       } catch (error) {
         console.error("Error fetching positions:", error);
       }
@@ -109,26 +117,32 @@ const WithdrawLPNew: React.FC = () => {
 
   useEffect(() => {
     if (!selectedPosition) return;
-    const { quoteToken, baseToken, lpMint } = selectedPosition;
-    if (!quoteToken || !baseToken || !lpMint) return;
+    const { token0, token1, lpMint } = selectedPosition;
+    if (!token0 || !token1 || !lpMint) return;
 
-    setQuoteTokenData({
-      id: quoteToken.symbol,
-      text: quoteToken.symbol,
-      img: quoteToken.image,
-      address: quoteToken.address,
+    settoken0Data({
+      id: token0.symbol,
+      text: token0.symbol,
+      img: token0.image,
+      address: token0.address,
+      name: token0.name || token0.symbol,
+      symbol: token0.symbol
     });
-    setBaseTokenData({
-      id: baseToken.symbol,
-      text: baseToken.symbol,
-      img: baseToken.image,
-      address: baseToken.address,
+    setToken1Data({
+      id: token1.symbol,
+      text: token1.symbol,
+      img: token1.image,
+      address: token1.address,
+      name: token1.name || token1.symbol,
+      symbol: token1.symbol
     });
     setLpTokenData({
       id: lpMint.toString().slice(0, 5),
       text: "lp",
       img: "https://swap.pump.fun/tokens/usde.webp",
       address: selectedPosition?.lpMint.toString(),
+      name: "LP Token",
+      symbol: "LP"
     });
   }, [selectedPosition]);
 
@@ -150,14 +164,6 @@ const WithdrawLPNew: React.FC = () => {
     warningAlert("Can't withdraw more than you take");
     setlpTokenAmount(lpBalance);
   }
-  // useEffect(() => {
-  //   if (pools.length > 0) {
-  //     const pool = pools.find(pool => pool.lpMint.toString() === lpTokenData?.address);
-  //     if (pool) {
-  //       setCheckPool(false);
-  //     }
-  //   }
-  // }, [lpTokenData]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -175,9 +181,9 @@ const WithdrawLPNew: React.FC = () => {
   };
 
   const selectToken = () => {
-    if (quoteTokenData === null || quoteTokenData === undefined) {
+    if (token0Data === null || token0Data === undefined) {
       setSelectTokenState("quote");
-    } else if (baseTokenData === null || baseTokenData === undefined) {
+    } else if (token1Data === null || token1Data === undefined) {
       setSelectTokenState("base");
     }
     setSelectTokenModalState(true);
@@ -185,15 +191,15 @@ const WithdrawLPNew: React.FC = () => {
 
   const handleTokenSelect = (token: TokenData) => {
     if (selectTokenState === "quote") {
-      setQuoteTokenData(token);
+      settoken0Data(token);
     } else {
-      setBaseTokenData(token);
+      setToken1Data(token);
     }
     setSelectTokenModalState(false);
   };
 
   const handlePositionSelect = (position: PositionData) => {
-    if (!position.quoteToken || !position.baseToken) {
+    if (!position.token0 || !position.token1) {
       errorAlert("Invalid position data");
       return;
     }
@@ -202,22 +208,22 @@ const WithdrawLPNew: React.FC = () => {
     setShowPositionModal(false);
 
     // Set tokens based on selected pool
-    setQuoteTokenData({
-      id: position.quoteToken.symbol,
-      text: position.quoteToken.name,
-      img: position.quoteToken.image,
-      address: position.quoteToken.address,
-      name: position.quoteToken.name,
-      symbol: position.quoteToken.symbol,
+    settoken0Data({
+      id: position.token0.symbol,
+      text: position.token0.name,
+      img: position.token0.image,
+      address: position.token0.address,
+      name: position.token0.name,
+      symbol: position.token0.symbol,
     });
 
-    setBaseTokenData({
-      id: position.baseToken.symbol,
-      text: position.baseToken.name,
-      img: position.baseToken.image,
-      address: position.baseToken.address,
-      name: position.baseToken.name,
-      symbol: position.baseToken.symbol,
+    setToken1Data({
+      id: position.token1.symbol,
+      text: position.token1.name,
+      img: position.token1.image,
+      address: position.token1.address,
+      name: position.token1.name,
+      symbol: position.token1.symbol,
     });
 
     // Reset amounts when pool is selected
@@ -228,51 +234,65 @@ const WithdrawLPNew: React.FC = () => {
   const handleWithdraw = async (
     address1: string,
     address2: string,
-    amount1: number,
-    amount2: number,
     lpAmount: number
   ) => {
+    if (!wallet.publicKey) {
+      errorAlert("Wallet not connected");
+      return;
+    }
+
+    if (!token0Data?.address || !token1Data?.address) {
+      errorAlert("Invalid token data");
+      return;
+    }
+
     console.log(
       "handlewithdraw: ",
       address1,
       address2,
-      amount1,
-      amount2,
       lpAmount
     );
     setIsLoading(true);
-    const quoteDecimal = await getTokenDecimals(address1);
-    console.log("🚀 ~ handleCreatepool ~ quoteDecimal:", quoteDecimal);
-    const baseDecimal = await getTokenDecimals(address2);
-    console.log("🚀 ~ handleCreatepool ~ baseDecimal:", baseDecimal);
-    const lpMint = await getLpMint(wallet, address1, address2);
-    // const lpDecimal = await getTokenDecimals(lpMint.toBase58());
-    const lpDecimal = lpMint ? await getTokenDecimals(lpMint.toBase58()) : null;
-
     try {
-      showNotification('processing', 'Sending transaction...');
+      const quoteDecimal = await getTokenDecimals(address1);
+      console.log("🚀 ~ handleCreatepool ~ quoteDecimal:", quoteDecimal);
+      const baseDecimal = await getTokenDecimals(address2);
+      console.log("🚀 ~ handleCreatepool ~ baseDecimal:", baseDecimal);
+      const lpMint = await getLpMint(wallet, address1, address2);
+      const lpDecimal = lpMint ? await getTokenDecimals(lpMint.toBase58()) : null;
+
+      if (!lpDecimal) {
+        throw new Error("Failed to get LP token decimals");
+      }
+
+      showNotification('processing', 'Sending transaction...', 'Please confirm the transaction in your wallet');
       const res = await withdraw(
         wallet,
         new PublicKey(address1),
         new PublicKey(address2),
-        amount1 * Math.pow(10, quoteDecimal),
-        amount2 * Math.pow(10, baseDecimal),
+        0,
+        0,
         lpAmount * Math.pow(10, lpDecimal)
       );
       console.log("🚀 ~ handleWithdraw ~ res:", res);
-      setIsLoading(false);
+
       if (res && typeof res === 'string') {
-        // successAlert("Withdraw success.");
-        showNotification('success', 'Transaction confirmed!', res);
+        showNotification('success', 'Transaction confirmed!', `Transaction hash: ${res.slice(0, 8)}...${res.slice(-8)}`);
+        // Reset amounts after successful withdrawal
+        setQuoteAmount(0);
+        setBaseAmount(0);
+        setlpTokenAmount(0);
+        // Refresh balances
+        await fetchBalance();
       } else {
-        // errorAlert("Withdraw failed.");
-        showNotification('error','""','Transaction failed');
+        showNotification('error', 'Transaction failed', 'Please try again');
       }
     } catch (error) {
+      console.error("Withdraw failed:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Transaction failed';
+      showNotification('error', 'Transaction failed', errorMessage);
+    } finally {
       setIsLoading(false);
-      console.log("Withdraw failed");
-      // errorAlert("Withdraw failed");
-      showNotification('error','""','Transaction failed');
     }
   };
 
@@ -287,9 +307,9 @@ const WithdrawLPNew: React.FC = () => {
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Select a liquidity position
               </span>
-              {quoteTokenData?.id && (
+              {token0Data?.id && (
                 <span className="text-gray-500 dark:text-gray-400">
-                  Balance: {quoteBalance}
+                  Balance: {lpBalance}
                 </span>
               )}
             </div>
@@ -303,7 +323,7 @@ const WithdrawLPNew: React.FC = () => {
                 }}
               >
                 <div className="flex flex-row gap-3 items-center justify-start">
-                  {!(quoteTokenData?.id && baseTokenData?.id) && (
+                  {!(token0Data?.id && token1Data?.id) && (
                     <button className="w-full p-4 rounded-xl border-2 border-purple-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <div className="text-center text-purple-600 dark:text-purple-400 font-medium">
                         Select a position
@@ -311,31 +331,29 @@ const WithdrawLPNew: React.FC = () => {
                     </button>
                   )}
 
-                  {quoteTokenData?.id && baseTokenData?.id && (
+                  {token0Data?.id && token1Data?.id && (
                     <button className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="flex -space-x-2">
                             <img
-                              src={quoteTokenData.img}
-                              alt={quoteTokenData.symbol}
+                              src={token0Data.img}
+                              alt={token0Data.symbol}
                               className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800"
                             />
                             <img
-                              src={baseTokenData.img}
-                              alt={baseTokenData.symbol}
+                              src={token1Data.img}
+                              alt={token1Data.symbol}
                               className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800"
                             />
                           </div>
                           <div className="ml-3 text-left">
                             <div className="font-medium">
-                              {quoteTokenData.id}/{baseTokenData.id}
+                              {token0Data.id}/{token1Data.id}
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {/* {quoteTokenData.quoteAmount}  */}
-                              1.5 {quoteTokenData.id} +
-                              {/* {baseTokenData.baseAmount}  */}
-                              187.50 {baseTokenData.id}
+                              {quoteBalance} {token0Data.id} +
+                              {baseBalance} {token1Data.id}
                             </div>
                           </div>
                         </div>
@@ -345,7 +363,7 @@ const WithdrawLPNew: React.FC = () => {
                   )}
                 </div>
               </div>
-              {quoteTokenData?.id && baseTokenData?.id && (
+              {token0Data?.id && token1Data?.id && (
                 <>
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-2">
@@ -385,14 +403,14 @@ const WithdrawLPNew: React.FC = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            {quoteTokenData ? (
+                            {token0Data ? (
                               <>
                                 <img
-                                  src={quoteTokenData.img}
-                                  alt={quoteTokenData.text}
+                                  src={token0Data.img}
+                                  alt={token0Data.text}
                                   className="w-6 h-6 rounded-full mr-2"
                                 />
-                                <span>{quoteTokenData.id}</span>
+                                <span>{token0Data.id}</span>
                               </>
                             ) : (
                               <span></span>
@@ -402,21 +420,20 @@ const WithdrawLPNew: React.FC = () => {
                             <div className="font-medium">{quoteAmount}</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               ≈ $125.75
-                              {/* ${quoteTokenDataUsdValue.toFixed(2)} */}
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            {baseTokenData ? (
+                            {token1Data ? (
                               <>
                                 <img
-                                  src={baseTokenData.img}
-                                  alt={baseTokenData.text}
+                                  src={token1Data.img}
+                                  alt={token1Data.text}
                                   className="w-6 h-6 rounded-full mr-2"
                                 />
-                                <span>{baseTokenData.id}</span>
+                                <span>{token1Data.id}</span>
                               </>
                             ) : (
                               <span></span>
@@ -426,7 +443,6 @@ const WithdrawLPNew: React.FC = () => {
                             <div className="font-medium">{baseAmount}</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               ≈ $125.00
-                              {/* ${baseTokenDataUsdValue.toFixed(2)} */}
                             </div>
                           </div>
                         </div>
@@ -435,7 +451,6 @@ const WithdrawLPNew: React.FC = () => {
                           <span>Total:</span>
                           <span>
                             ≈ $250.75
-                            {/* ${totalUsdValue.toFixed(2)} */}
                           </span>
                         </div>
                       </div>
@@ -448,30 +463,30 @@ const WithdrawLPNew: React.FC = () => {
                     </div>
 
                     <div className="space-y-2 text-sm">
-                      {quoteTokenData && baseTokenData ? (
+                      {token0Data && token1Data ? (
                         <>
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {quoteTokenData.id} price:
+                              {token0Data.id} price:
                             </span>
                             <span>
-                              1 {quoteTokenData.id} ={" "}
+                              1 {token0Data.id} ={" "}
                               {(
-                                baseTokenData.price! / quoteTokenData.price!
+                                token1Data.price! / token0Data.price!
                               ).toFixed(6)}{" "}
-                              {baseTokenData.id}
+                              {token1Data.id}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {baseTokenData.id} price:
+                              {token1Data.id} price:
                             </span>
                             <span>
-                              1 {baseTokenData.id} ={" "}
+                              1 {token1Data.id} ={" "}
                               {(
-                                quoteTokenData.price! / baseTokenData.price!
+                                token0Data.price! / token1Data.price!
                               ).toFixed(6)}{" "}
-                              {quoteTokenData.id}
+                              {token0Data.id}
                             </span>
                           </div>
                         </>
@@ -485,10 +500,6 @@ const WithdrawLPNew: React.FC = () => {
                         </span>
                         <span>
                           0%
-                          {/* {withdrawAmount && balance
-                            ? `${((parseFloat(withdrawAmount) / parseFloat(balance)) * 100).toFixed(4)}%`
-                            : '0%'
-                          } */}
                         </span>
                       </div>
                     </div>
@@ -502,7 +513,7 @@ const WithdrawLPNew: React.FC = () => {
         </CardBody>
         <CardFooter>
           <div className="space-y-3 w-full">
-            {!quoteTokenData?.id || !baseTokenData?.id ? (
+            {!token0Data?.id || !token1Data?.id ? (
               <Button fullWidth size="lg" disabled>
                 Select Position
               </Button>
@@ -516,17 +527,13 @@ const WithdrawLPNew: React.FC = () => {
                 size="lg"
                 onClick={() => {
                   if (
-                    quoteTokenData?.address &&
-                    baseTokenData?.address &&
-                    quoteAmount &&
-                    baseAmount &&
+                    token0Data?.address &&
+                    token1Data?.address &&
                     lpTokenAmount
                   ) {
                     handleWithdraw(
-                      quoteTokenData.address,
-                      baseTokenData.address,
-                      quoteAmount,
-                      baseAmount,
+                      token0Data.address,
+                      token1Data.address,
                       lpTokenAmount
                     );
                   } else {

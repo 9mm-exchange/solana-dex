@@ -34,7 +34,7 @@ const Home: React.FC = () => {
                 Trade tokens with ease
               </span>
               <br />
-              <span>on TanFi</span>
+              <span>on 9mm</span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-400">
               Swap tokens, provide liquidity, and earn rewards on the most user-friendly DEX platform.
@@ -56,7 +56,7 @@ const Home: React.FC = () => {
                 <div className="w-24 h-24 mx-auto rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
                   <EtherealIcon size={48} className="text-white" />
                 </div>
-                <h2 className="mt-6 text-3xl font-bold">TanFi</h2>
+                <h2 className="mt-6 text-3xl font-bold">9mm</h2>
                 <p className="mt-2">Your gateway to DeFi</p>
               </div>
             </div>
@@ -67,7 +67,7 @@ const Home: React.FC = () => {
       {/* Features Section */}
       <section>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Why Choose TanFi?</h2>
+          <h2 className="text-3xl font-bold mb-4">Why Choose 9mm?</h2>
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             We've built a platform that combines security, speed, and user experience
             to deliver the best trading experience possible.
@@ -120,7 +120,7 @@ const Home: React.FC = () => {
         <Card glass className="p-10 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to start trading?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of traders already using TanFi to trade tokens with minimal fees and maximum rewards.
+            Join thousands of traders already using 9mm to trade tokens with minimal fees and maximum rewards.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button size="lg" onClick={() => navigate('/swap')}>

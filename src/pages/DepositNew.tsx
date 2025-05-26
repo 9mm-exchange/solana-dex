@@ -4,9 +4,9 @@ import { getTokenDecimals } from "../program/utils";
 import {
   deposit,
   getLpMint,
-  getOutAmount,
-  getPoolAddress,
+  getSwapOut,
   getTokenBalance,
+  getPoolAddress,
 } from "../program/web3";
 
 import { BN } from "@coral-xyz/anchor";
@@ -108,14 +108,15 @@ const DepositNew: React.FC = () => {
         quoteTokenData.address,
         baseTokenData.address
       );
+      console.log("🚀 ~ calculateLpAmount ~ lpMint:", lpMint?.toBase58())
       // const lpDecimal = await getTokenDecimals(lpMint.toBase58());
       const lpDecimal = lpMint
         ? await getTokenDecimals(lpMint.toBase58())
         : null;
 
       // Calculate LP amount based on the ratio of input amounts to pool reserves
-      const poolQuoteAmount = Number(selectedPool.quoteToken?.amount || "0");
-      const poolBaseAmount = Number(selectedPool.baseToken?.amount || "0");
+      const poolQuoteAmount = Number(selectedPool.token1?.amount || "0");
+      const poolBaseAmount = Number(selectedPool.token0?.amount || "0");
       const totalLpSupply = Number(selectedPool.liquidity || "0");
 
       if (poolQuoteAmount > 0 && poolBaseAmount > 0 && totalLpSupply > 0) {
@@ -164,22 +165,18 @@ const DepositNew: React.FC = () => {
       if (selectedPool && quoteTokenData && baseTokenData) {
         setIsCalculating(true);
         try {
-          const isQuoteToken0 =
-            quoteTokenData.address === selectedPool.quoteToken?.address;
-          const result = await getOutAmount(
+          const result = await getSwapOut(
             wallet,
+            quoteTokenData.address,
+            baseTokenData.address,
             new PublicKey(selectedPool.address),
             numericValue
           );
-
-          // Determine base amount based on token positions
-          const calculatedBaseAmount = isQuoteToken0
-            ? result.token1Amount
-            : result.token0Amount;
-          setBaseAmount(calculatedBaseAmount);
+          console.log("🚀 ~ handleInputChange ~ result:", result) 
+          setBaseAmount(result);
 
           // Update the LP token calculation
-          await calculateLpAmount(numericValue, calculatedBaseAmount || 0);
+          await calculateLpAmount(numericValue, result || 0);
         } catch (error) {
           console.error("Error calculating base amount:", error);
           errorAlert(
@@ -205,22 +202,18 @@ const DepositNew: React.FC = () => {
       if (selectedPool && quoteTokenData && baseTokenData) {
         setIsCalculating(true);
         try {
-          const isBaseToken0 =
-            baseTokenData.address === selectedPool.baseToken?.address;
-          const result = await getOutAmount(
+          const result = await getSwapOut(
             wallet,
+            baseTokenData.address,
+            quoteTokenData.address,
             new PublicKey(selectedPool.address),
             numericValue
           );
-
-          // Determine quote amount based on token positions
-          const calculatedQuoteAmount = isBaseToken0
-            ? result.token1Amount
-            : result.token0Amount;
-          setQuoteAmount(calculatedQuoteAmount);
+          console.log("🚀 ~ handleInputChange ~ result:", result)
+          setQuoteAmount(result);
 
           // Update the LP token calculation
-          await calculateLpAmount(calculatedQuoteAmount || 0, numericValue);
+          await calculateLpAmount(result || 0, numericValue);
         } catch (error) {
           console.error("Error calculating quote amount:", error);
           errorAlert(
@@ -250,13 +243,16 @@ const DepositNew: React.FC = () => {
     }
     setSelectTokenModalState(false);
 
-    // If both tokens are selected, find and select the matching pool
-    if (baseTokenData && quoteTokenData) {
+    // Only proceed with pool selection if we have both tokens
+    const newQuoteToken = selectTokenState === "quote" ? token : quoteTokenData;
+    const newBaseToken = selectTokenState === "base" ? token : baseTokenData;
+
+    if (newQuoteToken && newBaseToken) {
       try {
         const poolAddress = await getPoolAddress(
           wallet,
-          baseTokenData.address,
-          quoteTokenData.address
+          newQuoteToken.address,
+          newBaseToken.address
         );
 
         if (poolAddress) {
@@ -280,7 +276,7 @@ const DepositNew: React.FC = () => {
   };
 
   const handlePoolSelect = (pool: PoolData) => {
-    if (!pool.quoteToken || !pool.baseToken) {
+    if (!pool.token0 || !pool.token1) {
       errorAlert("Invalid pool data");
       return;
     }
@@ -290,21 +286,21 @@ const DepositNew: React.FC = () => {
 
     // Set tokens based on selected pool
     setQuoteTokenData({
-      id: pool.quoteToken.symbol,
-      text: pool.quoteToken.name,
-      img: pool.quoteToken.image,
-      address: pool.quoteToken.address,
-      name: pool.quoteToken.name,
-      symbol: pool.quoteToken.symbol,
+      id: pool.token1.symbol,
+      text: pool.token1.name,
+      img: pool.token1.image,
+      address: pool.token1.address,
+      name: pool.token1.name,
+      symbol: pool.token1.symbol,
     });
 
     setBaseTokenData({
-      id: pool.baseToken.symbol,
-      text: pool.baseToken.name,
-      img: pool.baseToken.image,
-      address: pool.baseToken.address,
-      name: pool.baseToken.name,
-      symbol: pool.baseToken.symbol,
+      id: pool.token0.symbol,
+      text: pool.token0.name,
+      img: pool.token0.image,
+      address: pool.token0.address,
+      name: pool.token0.name,
+      symbol: pool.token0.symbol,
     });
 
     // Reset amounts when pool is selected
@@ -313,7 +309,7 @@ const DepositNew: React.FC = () => {
   };
 
   const handleDeposite = async (
-    address: string,
+    address0: string,
     address1: string,
     quoteAmount: number,
     baseAmount: number
@@ -347,23 +343,23 @@ const DepositNew: React.FC = () => {
 
     try {
       showNotification('processing', 'Sending transaction...');
-      const poolAddress = await getPoolAddress(wallet, address, address1);
+      const poolAddress = selectedPool?.address;
 
       if (!poolAddress) {
         errorAlert("Failed to find pool address");
         return;
       }
 
-      const quoteDecimal = await getTokenDecimals(address);
+      const quoteDecimal = await getTokenDecimals(address0);
       const baseDecimal = await getTokenDecimals(address1);
 
-      const lpMint = await getLpMint(wallet, address, address1);
+      const lpMint = selectedPool?.lpMint;
       if (!lpMint) {
         errorAlert("Failed to get LP mint address");
         return;
       }
 
-      const lpDecimal = await getTokenDecimals(lpMint.toBase58());
+      const lpDecimal = await getTokenDecimals(lpMint);
 
       const quoteAmountBN = new BN(quoteAmount * Math.pow(10, quoteDecimal));
       const baseAmountBN = new BN(baseAmount * Math.pow(10, baseDecimal));
@@ -372,16 +368,17 @@ const DepositNew: React.FC = () => {
         wallet,
         quoteAmountBN,
         baseAmountBN,
-        poolAddress
+        new PublicKey(poolAddress)
       );
 
       const result = await deposit(
         wallet,
-        new PublicKey(address),
+        new PublicKey(address0),
         new PublicKey(address1),
         quoteAmountBN.toNumber(),
         baseAmountBN.toNumber(),
-        lpOutAmount.toNumber()
+        lpOutAmount.toNumber(),
+        new PublicKey(poolAddress)
       );
 
       console.log("🚀 ~ handleDeposite ~ result:", result);
@@ -399,7 +396,7 @@ const DepositNew: React.FC = () => {
         setQuoteAmount(0);
         setBaseAmount(0);
       } else {
-        showNotification('error', 'Deposit failed', 'Please try again.');
+        showNotification('error', 'Deposit failed');
       }
     } catch (error) {
       console.error("Deposit error:", error);
@@ -421,24 +418,17 @@ const DepositNew: React.FC = () => {
     if (selectedPool && quoteTokenData && baseTokenData) {
       setIsCalculating(true);
       try {
-        const isQuoteToken0 =
-          quoteTokenData.address === selectedPool.quoteToken?.address;
-
-        // Use `getOutAmount` to calculate the base token amount for the maximum quote amount
-        const result = await getOutAmount(
+        const result = await getSwapOut(
           wallet,
+          quoteTokenData.address,
+          baseTokenData.address,
           new PublicKey(selectedPool.address),
           quoteBalance
         );
-
-        // Determine base amount based on token positions
-        const calculatedBaseAmount = isQuoteToken0
-          ? result.token1Amount
-          : result.token0Amount;
-        setBaseAmount(calculatedBaseAmount);
+        setBaseAmount(result);
 
         // Update the LP token calculation with maximum quote and calculated base amounts
-        await calculateLpAmount(quoteBalance, calculatedBaseAmount || 0);
+        await calculateLpAmount(quoteBalance, result || 0);
       } catch (error) {
         console.error("Error calculating base amount on Max:", error);
         errorAlert(
@@ -628,21 +618,35 @@ const DepositNew: React.FC = () => {
                       ? "Selected Pool"
                       : "Select Pool"}
                   </div>
-                  <div className="font-medium">
-                    {quoteTokenData?.id && baseTokenData?.id
-                      ? `${quoteTokenData.id}/${baseTokenData.id}`
-                      : "View all pools"}
+                  <div className="font-medium flex items-center">
+                    {quoteTokenData?.id && baseTokenData?.id ? (
+                      <>
+                        <div className="flex -space-x-2 mr-3">
+                          <img
+                            src={quoteTokenData?.img}
+                            alt={quoteTokenData?.symbol}
+                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                          />
+                          <img
+                            src={baseTokenData?.img}
+                            alt={baseTokenData?.symbol}
+                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                          />
+                        </div>
+                        {`${quoteTokenData.id}/${baseTokenData.id}`}
+                      </>
+                    ) : (
+                      "View all pools"
+                    )}
                   </div>
                 </div>
                 <ChevronDown size={16} className="text-gray-400" />
               </div>
-              {quoteTokenData?.id && baseTokenData?.id ? (
+              {quoteTokenData?.id && baseTokenData?.id && selectedPool ? (
                 <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   APR: %
                 </div>
-              ) : (
-                ""
-              )}
+              ) : null}
             </button>
           </div>
         </CardBody>
@@ -668,11 +672,10 @@ const DepositNew: React.FC = () => {
               <Button
                 fullWidth
                 size="lg"
-                className={`w-full flex justify-center items-center py-4 rounded-xl text-white h-14 transition-colors ${
-                  isCalculating
+                className={`w-full flex justify-center items-center py-4 rounded-xl text-white h-14 transition-colors ${isCalculating
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-[#87EFAC] hover:bg-[#6EE79D]"
-                }`}
+                  }`}
                 onClick={() =>
                   !isCalculating &&
                   quoteTokenData?.address &&

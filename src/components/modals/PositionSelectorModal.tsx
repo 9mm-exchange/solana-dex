@@ -60,12 +60,12 @@ const PositionSelectorModal: React.FC<PositionSelectorModalProps> = ({
                   <div className="flex items-center">
                     <div className="flex -space-x-2 mr-3">
                       <img 
-                        src={position.token0.logoURI} 
+                        src={position.token0.img} 
                         alt={position.token0.symbol} 
                         className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800" 
                       />
                       <img 
-                        src={position.token1.logoURI} 
+                        src={position.token1.img} 
                         alt={position.token1.symbol} 
                         className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800" 
                       />

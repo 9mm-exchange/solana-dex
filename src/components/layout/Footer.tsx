@@ -10,7 +10,7 @@ const Footer: React.FC = () => {
           <div>
             <div className="flex items-center">
               <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              TanFi
+              9mm
               </span>
             </div>
             <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">
@@ -56,7 +56,7 @@ const Footer: React.FC = () => {
 
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            © {new Date().getFullYear()} TanFi Swap. All rights reserved.
+            © {new Date().getFullYear()} 9mm Swap. All rights reserved.
           </p>
         </div>
       </div>

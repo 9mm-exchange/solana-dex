@@ -34,6 +34,8 @@ import { getPoolList, PoolData } from "../utils/getPoolList";
 //   symbol: string;
 // }
 interface CreatePoolResponse {
+  res: string;
+  lpMint: PublicKey;
   poolAddress: PublicKey;
 }
 
@@ -54,40 +56,40 @@ const CreateLPNew: React.FC = () => {
   const [pools, setPools] = useState<PoolData[]>([]);
   const [checkPoolExist, setCheckPoolExist] = useState<boolean>(false);
   const { showNotification } = useTransactionNotifications();
- 
-  
+
+
   interface Token {
-  id: string;
-  symbol: string;
-  name: string;
-  address: string;
-  decimals: number;
-  logoURI: string;
-}
+    id: string;
+    symbol: string;
+    name: string;
+    address: string;
+    decimals: number;
+    logoURI: string;
+  }
 
-const quoteToken: Token | null = quoteTokenData ? {
-  id: quoteTokenData.id,
-  symbol: quoteTokenData.symbol ?? '',
-  name: quoteTokenData.name ?? '',
-  address: quoteTokenData.address,
-  decimals: quoteTokenData.price ?? 18,
-  logoURI: quoteTokenData.img ?? ''
-} : null;
+  const quoteToken: Token | null = quoteTokenData ? {
+    id: quoteTokenData.id,
+    symbol: quoteTokenData.symbol ?? '',
+    name: quoteTokenData.name ?? '',
+    address: quoteTokenData.address,
+    decimals: quoteTokenData.price ?? 18,
+    logoURI: quoteTokenData.img ?? ''
+  } : null;
 
-const baseToken: Token | null = baseTokenData ? {
-  id: baseTokenData.id,
-  symbol: baseTokenData.symbol ?? '',
-  name: baseTokenData.name ?? '',
-  address: baseTokenData.address,
-  decimals: baseTokenData.price ?? 18,
-  logoURI: baseTokenData.img ?? ''
-} : null;
+  const baseToken: Token | null = baseTokenData ? {
+    id: baseTokenData.id,
+    symbol: baseTokenData.symbol ?? '',
+    name: baseTokenData.name ?? '',
+    address: baseTokenData.address,
+    decimals: baseTokenData.price ?? 18,
+    logoURI: baseTokenData.img ?? ''
+  } : null;
 
-function calculateTotalUSD(amount0: number, amount1: number): number {
-  return amount0 + amount1;
-}
+  function calculateTotalUSD(amount0: number, amount1: number): number {
+    return amount0 + amount1;
+  }
 
-const totalValueUSD: number = calculateTotalUSD(quoteBalance, baseBalance);
+  const totalValueUSD: number = calculateTotalUSD(quoteBalance, baseBalance);
 
 
   // Calculate conversion rate and USD values
@@ -279,47 +281,71 @@ const totalValueUSD: number = calculateTotalUSD(quoteBalance, baseBalance);
         throw new Error("Token standards are missing");
       }
 
-      const res = (await createPool(
-        wallet,
-        new PublicKey(quoteTokenData.address),
-        new PublicKey(baseTokenData.address),
-        quoteAmount * Math.pow(10, quoteDecimal),
-        baseAmount * Math.pow(10, baseDecimal),
-        quoteStandard,
-        baseStandard
-      )) as CreatePoolResponse;
+      let res: CreatePoolResponse | null = null;
+      
+      // Ensure quote token address is always smaller than base token address
+      const quoteAddress = new PublicKey(quoteTokenData.address);
+      const baseAddress = new PublicKey(baseTokenData.address);
+      
+      console.log("Quote token address:", quoteAddress.toBase58());
+      console.log("Base token address:", baseAddress.toBase58());
+      
+      if (quoteAddress.toBase58() < baseAddress.toBase58()) {
+        // Original order is correct
+        res = (await createPool(
+          wallet,
+          quoteAddress,
+          baseAddress,
+          quoteAmount * Math.pow(10, quoteDecimal),
+          baseAmount * Math.pow(10, baseDecimal),
+          quoteStandard,
+          baseStandard
+        )) as CreatePoolResponse;
+      } else {
+        // Need to swap the order
+        res = (await createPool(
+          wallet,
+          baseAddress,
+          quoteAddress,
+          baseAmount * Math.pow(10, baseDecimal),
+          quoteAmount * Math.pow(10, quoteDecimal),
+          baseStandard,
+          quoteStandard
+        )) as CreatePoolResponse;
+      }
 
       console.log("🚀 ~ handleCreatepool ~ res:", res);
-      if (res && res.poolAddress  && typeof res === 'string') {
-        // successAlert("Pool created successfully");
-        showNotification('success', 'Transaction confirmed!', res);
-        // Reset form
-        setQuoteAmount(0);
-        setBaseAmount(0);
-        setQuoteTokenData(null);
-        setBaseTokenData(null);
-      } else {
-        // errorAlert("Failed to create pool");
-        showNotification('error','""','Transaction failed');
+      
+      // Check if the response is valid
+      if (!res || !res.res || !res.lpMint || !res.poolAddress) {
+        showNotification('error', 'Failed to create pool', res?.res);
+        return;
       }
+
+      // If we get here, the transaction was successful
+      showNotification('success', 'Pool created successfully!', res.res);
+      // Reset form
+      setQuoteAmount(0);
+      setBaseAmount(0);
+      setQuoteTokenData(null);
+      setBaseTokenData(null);
     } catch (error) {
       console.error("Create pool error:", error);
       if (error instanceof WalletSignTransactionError) {
-        warningAlert("Transaction was not signed. Please try again.");
+        showNotification('error', 'Transaction was not signed', 'Please try again.');
       } else {
-        // errorAlert("Failed to create pool. Please try again.");
-        showNotification('error','""','Transaction failed');
+        showNotification('error', 'Failed to create pool', 'Please try again.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-   const handleNavigateToDeposit = useCallback(() => {
-      if (quoteTokenData && baseTokenData) {
-        navigate(`/deposit-new`);
-      }
-    }, [quoteTokenData, baseTokenData, navigate]);
+  const handleNavigateToDeposit = useCallback(() => {
+    if (quoteTokenData && baseTokenData) {
+      navigate(`/deposit-new`);
+    }
+  }, [quoteTokenData, baseTokenData, navigate]);
 
   return (
     <div className="max-w-lg mx-auto">
@@ -523,11 +549,10 @@ const totalValueUSD: number = calculateTotalUSD(quoteBalance, baseBalance);
               <Button
                 fullWidth
                 size="lg"
-                className={`w-full flex justify-center items-center mt-4 py-4 rounded-xl  h-14 transition-colors ${
-                  checkPoolExist
+                className={`w-full flex justify-center items-center mt-4 py-4 rounded-xl  h-14 transition-colors ${checkPoolExist
                     ? "bg-gray-600 hover:bg-gray-700 text-white"
                     : "bg-[#87EFAC] hover:bg-[#6EE79D] text-black"
-                }`}
+                  }`}
                 onClick={() => {
                   if (!checkPoolExist) handleCreatepool();
                 }}

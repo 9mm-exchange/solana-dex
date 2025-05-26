@@ -1,26 +1,6 @@
 import axios from 'axios';
 import { BACKEND_URL } from './util';
-
-export interface PoolData {
-  vol: string;
-  liquidity: string;
-  address: string;
-  lpMint: string;
-  quoteToken: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-    amount?: string;
-  };
-  baseToken: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-    amount?: string;
-  };
-}
+import { PoolData } from '../types';
 
 export const getPoolList = async (): Promise<PoolData[]> => {
   try {
@@ -33,18 +13,20 @@ export const getPoolList = async (): Promise<PoolData[]> => {
         liquidity: pool.liquidity || '0',
         address: pool.address,
         lpMint: pool.lpMint,
-        quoteToken: {
-          address: pool.quoteToken?.address || '',
-          symbol: pool.quoteToken?.symbol || '',
-          name: pool.quoteToken?.name || '',
-          image: pool.quoteToken?.image || 'https://swap.pump.fun/tokens/usde.webp'
-        },
-        baseToken: {
-          address: pool.baseToken?.address || '',
-          symbol: pool.baseToken?.symbol || '',
-          name: pool.baseToken?.name || '',
-          image: pool.baseToken?.image || 'https://swap.pump.fun/tokens/usde.webp'
-        }
+        token0: pool.token0 ? {
+          address: pool.token0.address,
+          symbol: pool.token0.symbol,
+          name: pool.token0.name,
+          image: pool.token0.image,
+          amount: pool.token0.amount || '0'
+        } : null,
+        token1: pool.token1 ? {
+          address: pool.token1.address,
+          symbol: pool.token1.symbol,
+          name: pool.token1.name,
+          image: pool.token1.image,
+          amount: pool.token1.amount || '0'
+        } : null
       }));
     }
     

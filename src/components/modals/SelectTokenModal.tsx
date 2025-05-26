@@ -76,12 +76,12 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
         
         if (Array.isArray(response.data)) {
           const formattedTokens = response.data.map((token: any) => ({
-            id: token.symbol || token.id || '',
-            text: token.name || token.text || '',
-            img: token.image || token.img || 'https://swap.pump.fun/tokens/usde.webp',
-            address: token.address,
-            name: token.name || token.text || '',
-            symbol: token.symbol || token.id || ''
+            id: token.symbol || '',
+            text: token.name || '',
+            img: token.logoURI || 'https://swap.pump.fun/tokens/usde.webp',
+            address: token.mint || '',
+            name: token.name || '',
+            symbol: token.symbol || ''
           }));
           setCustomTokens(formattedTokens);
         } else {
@@ -100,9 +100,9 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
 
   // Enhanced search function
   const filteredTokens = [...defaultTokens, ...customTokens].filter(token =>
-    token.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.address.toLowerCase().includes(searchQuery.toLowerCase())
+    (token.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (token.symbol?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (token.address || '').includes(searchQuery)
   );
 
   // Handle fetching metadata when searchQuery changes
@@ -142,7 +142,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
       errorAlert("Failed to fetch token metadata");
       return;
     }
-
+    
     const newToken: TokenData = {
       id: metadata.symbol || newTokenSymbol || "",
       text: metadata.name || newTokenName || "",
@@ -151,6 +151,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
       name: metadata.name || newTokenName || "",
       symbol: metadata.symbol || newTokenSymbol || ""
     };
+    console.log("🚀 ~ handleAddToken ~ newToken:", newToken)
 
     try {
       const response = await axios.post(`${BACKEND_URL}/user/addToken`, {
@@ -168,12 +169,12 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
         
         if (Array.isArray(tokensResponse.data)) {
           const formattedTokens = tokensResponse.data.map((token: any) => ({
-            id: token.symbol || token.id || '',
-            text: token.name || token.text || '',
-            img: token.image || token.img || 'https://swap.pump.fun/tokens/usde.webp',
-            address: token.address,
-            name: token.name || token.text || '',
-            symbol: token.symbol || token.id || ''
+            id: token.symbol || '',
+            text: token.name || '',
+            img: token.logoURI || 'https://swap.pump.fun/tokens/usde.webp',
+            address: token.mint || '',
+            name: token.name || '',
+            symbol: token.symbol || ''
           }));
           setCustomTokens(formattedTokens);
         }

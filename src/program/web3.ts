@@ -1,7 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
-// import { Metaplex } from "@metaplex-foundation/js";
 import { AMM_CONFIG_SEED, POOL_SEED, u16ToBytes } from "@raydium-io/raydium-sdk";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, getMint, getTokenMetadata, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { ENV, TokenListProvider } from "@solana/spl-token-registry";
@@ -22,6 +21,7 @@ import { calculateDepositAmounts, calculateSwapResult, fromBigInt, toBigInt } fr
 import { AUTH_SEED, OBSERVATION_SEED, POOL_LP_MINT_SEED } from "./constant";
 import { execTx } from "./transaction";
 import { checkTokenStandard, getTokenDecimals } from "./utils";
+
 
 const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
@@ -72,7 +72,18 @@ export const connection = new Connection(endpoint, commitmentLevel);
 export const raydiumCpSwapId = new PublicKey(raydiumCpSwapIdl.address);
 export const raydiumCpSwapProgramInterface = JSON.parse(JSON.stringify(raydiumCpSwapIdl));
 
-export const createPool = async (wallet: WalletContextState, quoteToken: PublicKey, baseToken: PublicKey, quoteAmount: number, baseAmount: number, quoteProgram: PublicKey, baseProgram: PublicKey) => {
+export const createPool = async (
+  wallet: WalletContextState, 
+  quoteToken: PublicKey, 
+  baseToken: PublicKey, 
+  quoteAmount: number, 
+  baseAmount: number, 
+  quoteProgram: PublicKey, 
+  baseProgram: PublicKey
+) => {
+  console.log("quoteToken: ", quoteToken.toBase58());
+  console.log("baseToken: ", baseToken.toBase58());
+  console.log("createpool: ", quoteToken.toBase58() < baseToken.toBase58());
 
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
@@ -185,7 +196,8 @@ export const deposit = async (
   baseToken: PublicKey,
   quoteAmount: number,
   baseAmount: number,
-  lpAmount: number
+  lpAmount: number,
+  poolAddress: PublicKey
 ) => {
   console.log("🚀 ~ deposit ~ lpAmount:", lpAmount);
   console.log("🚀 ~ deposit ~ quoteAmount:", quoteAmount);
@@ -218,15 +230,15 @@ export const deposit = async (
   const [auth] = await PublicKey.findProgramAddress([Buffer.from(AUTH_SEED)], program.programId);
   console.log("auth", auth.toBase58());
 
-  const [poolAddress] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from(POOL_SEED),
-      configAddr.toBuffer(),
-      quoteToken.toBuffer(),
-      baseToken.toBuffer(),
-    ],
-    program.programId
-  );
+  // const [poolAddress] = await PublicKey.findProgramAddress(
+  //   [
+  //     Buffer.from(POOL_SEED),
+  //     configAddr.toBuffer(),
+  //     quoteToken.toBuffer(),
+  //     baseToken.toBuffer(),
+  //   ],
+  //   program.programId
+  // );
   console.log("poolAddress: ", poolAddress.toBase58());
 
   const [lpMint] = await PublicKey.findProgramAddress(
@@ -737,48 +749,68 @@ interface MetadataJson {
 }
 
 export async function getMetadata(mint: string) {
-  const metaplex = Metaplex.make(connection);
+  try {
+    // First try getAsset RPC method
+    try {
+      const RPC = process.env.VITE_SOLANA_RPC || "https://api.devnet.solana.com";
+      const response = await fetch(RPC, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getAsset",
+          params: [mint]
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.result?.content?.json_uri) {
+        const jsonData = await fetch(data.result.content.json_uri);
+        const jsonData2 = await jsonData.json();
+        return {
+          name: jsonData2.name || "",
+          symbol: jsonData2.symbol || "",
+          img: jsonData2.image || ""
+        };
+      }
+    } catch (error) {
+      console.log("Error fetching from getAsset, trying token list:", error);
+    }
 
-  const mintAddress = new PublicKey(mint);
-
-  let tokenName;
-  let tokenSymbol;
-  let tokenLogo;
-
-  const metadataAccount = metaplex
-    .nfts()
-    .pdas()
-    .metadata({ mint: mintAddress });
-
-  const metadataAccountInfo = await connection.getAccountInfo(metadataAccount);
-
-  if (metadataAccountInfo) {
-    const token = await metaplex.nfts().findByMint({ mintAddress: mintAddress });
-    tokenName = token.name;
-    tokenSymbol = token.symbol;
-    tokenLogo = token.json?.image;
-
-    return {
-      name: tokenName || "",
-      symbol: tokenSymbol || "",
-      img: tokenLogo || ""
-    };
-
-  }
-  else {
+    // Fallback to token list if getAsset fails
     const provider = await new TokenListProvider().resolve();
     const tokenList = provider.filterByChainId(ENV.MainnetBeta).getList();
-    console.log(tokenList)
     const tokenMap = tokenList.reduce((map, item) => {
       map.set(item.address, item);
       return map;
     }, new Map());
 
-    const token = tokenMap.get(mintAddress.toBase58());
+    const token = tokenMap.get(mint);
+    if (token) {
+      return {
+        name: token.name || "",
+        symbol: token.symbol || "",
+        img: token.logoURI || ""
+      };
+    }
 
-    tokenName = token.name;
-    tokenSymbol = token.symbol;
-    tokenLogo = token.logoURI;
+    // If both methods fail, return empty values
+    return {
+      name: "",
+      symbol: "",
+      img: ""
+    };
+  } catch (error) {
+    console.error("Error in getMetadata:", error);
+    return {
+      name: "",
+      symbol: "",
+      img: ""
+    };
   }
 }
 
@@ -835,7 +867,9 @@ export const getOutAmount = async (
   const token0Info = await connection.getTokenAccountBalance(poolState.token0Vault);
   const token1Info = await connection.getTokenAccountBalance(poolState.token1Vault);
   const token0Amount = token0Info.value.amount;
+  console.log("🚀 ~ token0Amount:", token0Amount)
   const token1Amount = token1Info.value.amount;
+  console.log("🚀 ~ token1Amount:", token1Amount)
   const poolStateData = {
     token0Vault: poolState.token0Vault.toBase58(),
     token1Vault: poolState.token1Vault.toBase58(),
@@ -853,6 +887,7 @@ export const getOutAmount = async (
   );
   console.log("🚀 ~ result:", result)
   return result;
+  
 }
 
 export const getSwapOut = async (
@@ -877,7 +912,9 @@ export const getSwapOut = async (
     program.programId
   );
   const poolState = await program.account.poolState.fetch(poolAddress);
+  console.log("🚀 ~ poolState:", poolState)
   const configData = await program.account.ammConfig.fetch(configAddr);
+  console.log("🚀 ~ configData:", configData)
   const token0Decimals = poolState.mint0Decimals;
   const token1Decimals = poolState.mint1Decimals;
   const token0Info = await connection.getTokenAccountBalance(poolState.token0Vault);

@@ -4,9 +4,8 @@
  * Note that this is only a type helper and is not the actual IDL. The original
  * IDL can be found at `target/idl/raydium_cp_swap.json`.
  */
-
 export type RaydiumCpSwap = {
-  "address": "7QLzPUCeRzCvXNMQshV2ehmPG3jTZXPkAANCjaSeKN4V",
+  "address": "4n1Yh7moT84og34yUnrsaBiQ2Mc7j2k28fu9ioBa7xb1",
   "metadata": {
     "name": "raydiumCpSwap",
     "version": "0.1.1",
@@ -664,10 +663,16 @@ export type RaydiumCpSwap = {
           }
         },
         {
-          "name": "token0Mint"
+          "name": "token0Mint",
+          "docs": [
+            "Token_0 mint, the key must smaller then token_1 mint."
+          ]
         },
         {
-          "name": "token1Mint"
+          "name": "token1Mint",
+          "docs": [
+            "Token_1 mint, the key must grater then token_0 mint."
+          ]
         },
         {
           "name": "lpMint",
@@ -1657,6 +1662,10 @@ export type RaydiumCpSwap = {
         "kind": "struct",
         "fields": [
           {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
             "name": "poolId",
             "type": "pubkey"
           },
@@ -1683,10 +1692,6 @@ export type RaydiumCpSwap = {
           {
             "name": "liquidity",
             "type": "u64"
-          },
-          {
-            "name": "creator",
-            "type": "pubkey"
           }
         ]
       }
@@ -1702,14 +1707,6 @@ export type RaydiumCpSwap = {
           {
             "name": "poolId",
             "type": "pubkey"
-          },
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
-          {
-            "name": "lpAmountIn",
-            "type": "u64"
           },
           {
             "name": "lpAmountBefore",
@@ -2025,10 +2022,6 @@ export type RaydiumCpSwap = {
             "type": "pubkey"
           },
           {
-            "name": "user",
-            "type": "pubkey"
-          },
-          {
             "name": "inputVaultBefore",
             "docs": [
               "pool vault sub trade fees"
@@ -2045,14 +2038,14 @@ export type RaydiumCpSwap = {
           {
             "name": "inputAmount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },
           {
             "name": "outputAmount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },

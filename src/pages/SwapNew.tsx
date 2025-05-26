@@ -26,6 +26,8 @@ import {
   swap,
 } from "../program/web3";
 import { PoolData, TokenData } from "../types";
+import { getPoolList } from "../utils/getPoolList";
+import { WalletSignTransactionError } from "@solana/wallet-adapter-base";
 
 const SwapNew: React.FC = () => {
   const wallet = useWallet();
@@ -105,22 +107,21 @@ const SwapNew: React.FC = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const fetchPools = async () => {
-  //     try {
-  //       const poolData = await getPoolList();
-  //       setPoolList(poolData);
-  //     } catch (error) {
-  //       console.error("Error fetching pool list:", error);
-  //       errorAlert("Failed to fetch pool list!");
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchPools = async () => {
+      try {
+        const poolData = await getPoolList();
+        console.log("🚀 ~ fetchPools ~ poolList:", poolData);
+        setPoolList(poolData);
+      } catch (error) {
+        console.error("Error fetching pools:", error);
+        errorAlert("Failed to fetch pool list!");
+      }
+    };
 
-  //   if (!hasFetched.current) {
-  //     hasFetched.current = true;
-  //     fetchPools();
-  //   }
-  // }, []);
+    fetchPools();
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchBalance();
@@ -164,6 +165,8 @@ const SwapNew: React.FC = () => {
           setPoolAddr(pool);
           setSwapAvailable(true);
         } else {
+          console.log("sellTokenData", sellTokenData);
+          console.log("buyTokenData", buyTokenData);
           console.warn("No matching pools found.");
           setPoolAddr(null);
           setSwapAvailable(false);
@@ -244,7 +247,7 @@ const SwapNew: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      showNotification('processing', 'Sending transaction...');
+      showNotification('processing', `Swapping ${amount} ${sellTokenData.symbol} for ${buyTokenData?.symbol}...`);
       if (sellTokenData.address) {
         const txHash = await swap(
           wallet,
@@ -255,19 +258,24 @@ const SwapNew: React.FC = () => {
         );
         setIsLoading(false);
         if (txHash && typeof txHash === 'string') {
-          showNotification('success', 'Transaction confirmed!', txHash);
-          // successAlert("Swap success.");
+          showNotification('success', `Successfully swapped ${amount} ${sellTokenData.symbol} for ${buyTokenData?.symbol}`, txHash);
           fetchBalance();
         } else {
-          showNotification('error','""','Transaction failed');
-          // errorAlert("Swap failed.");
+          showNotification('error', 'Transaction failed', 'The swap transaction was not completed successfully');
         }
       }
     } catch (error) {
       setIsLoading(false);
       console.error("Error during swap:", error);
-      showNotification('error', error instanceof Error ? error.message : 'Transaction failed');
-      // errorAlert("Swap failed!");
+      let errorMessage = 'Transaction failed';
+      
+      if (error instanceof WalletSignTransactionError) {
+        errorMessage = 'Transaction was not signed. Please try again.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      showNotification('error', errorMessage);
     }
   };
 

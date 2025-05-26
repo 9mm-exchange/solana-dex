@@ -1,24 +1,6 @@
 import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-
-interface PoolData {
-  vol: string;
-  liquidity: string;
-  address: string;
-  lpMint: string;
-  quoteToken?: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-  };
-  baseToken?: {
-    address: string;
-    symbol: string;
-    name: string;
-    image: string;
-  };
-}
+import { PoolData } from '../../types';
 
 interface PoolModalProps {
   pools: PoolData[];
@@ -27,6 +9,7 @@ interface PoolModalProps {
 }
 
 const PoolModal: React.FC<PoolModalProps> = ({ pools, onSelect, onClose }) => {
+  console.log("🚀 ~ pools:", pools)
   const menuDropdown = useRef<HTMLDivElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPools, setFilteredPools] = useState(pools);
@@ -48,11 +31,11 @@ const PoolModal: React.FC<PoolModalProps> = ({ pools, onSelect, onClose }) => {
     const query = searchQuery.toLowerCase();
 
     const filtered = pools.filter((pool) => {
-      const quoteSymbol = pool.quoteToken?.symbol?.toLowerCase() || '';
-      const baseSymbol = pool.baseToken?.symbol?.toLowerCase() || '';
+      const quoteSymbol = pool.token0?.symbol?.toLowerCase() || '';
+      const baseSymbol = pool.token1?.symbol?.toLowerCase() || '';
       const address = pool.address?.toLowerCase() || '';
-      const quoteName = pool.quoteToken?.name?.toLowerCase() || '';
-      const baseName = pool.baseToken?.name?.toLowerCase() || '';
+      const quoteName = pool.token0?.name?.toLowerCase() || '';
+      const baseName = pool.token1?.name?.toLowerCase() || '';
 
       return (
         quoteSymbol.includes(query) ||
@@ -66,8 +49,6 @@ const PoolModal: React.FC<PoolModalProps> = ({ pools, onSelect, onClose }) => {
 
     setFilteredPools(filtered);
   }, [searchQuery, pools]);
-
-  
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -95,23 +76,35 @@ const PoolModal: React.FC<PoolModalProps> = ({ pools, onSelect, onClose }) => {
             autoFocus
           />
         </div>
-        
+
         <div className="overflow-y-auto flex-grow space-y-2">
           {filteredPools.length === 0 ? (
             <div className="py-8 text-center text-gray-500 dark:text-gray-400">
               No pools found matching your search
             </div>
-           ) : (
+          ) : (
             filteredPools.map((pool, index) => (
               <button
                 key={index}
                 onClick={() => onSelect(pool)}
                 className={`w-full p-3 text-left rounded-lg transition-colors border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700`}
               >
-                {pool.quoteToken && pool.baseToken && (
+                {pool.token0 && pool.token1 && (
                   <div className="flex items-center justify-between">
-                    <div className="font-medium">
-                      {pool.quoteToken.symbol}/{pool.baseToken.symbol}
+                    <div className="font-medium flex items-center gap-2">
+                      <div className="flex -space-x-2 mr-3">
+                        <img
+                          src={pool.token0.image}
+                          alt={pool.token0.symbol}
+                          className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                        />
+                        <img
+                          src={pool.token1.image}
+                          alt={pool.token1.symbol}
+                          className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                        />
+                      </div>
+                      {pool.token0.symbol}/{pool.token1.symbol}
                     </div>
                     <div className="text-sm text-green-500">
                       APR: {pool.vol}%
@@ -121,7 +114,6 @@ const PoolModal: React.FC<PoolModalProps> = ({ pools, onSelect, onClose }) => {
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {pool.liquidity}
                 </div>
-                
               </button>
             ))
           )}

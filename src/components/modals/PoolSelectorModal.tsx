@@ -11,6 +11,7 @@ const PoolSelectorModal: React.FC<PoolSelectorModalProps> = ({
   searchQuery,
   onSearchChange,
 }) => {
+  console.log("🚀 ~ positions:", positions);
   if (!show) return null;
 
   return (
@@ -39,7 +40,7 @@ const PoolSelectorModal: React.FC<PoolSelectorModalProps> = ({
             autoFocus
           />
         </div>
-        
+
         <div className="overflow-y-auto flex-grow space-y-2">
           {positions.length === 0 ? (
             <div className="py-8 text-center text-gray-500 dark:text-gray-400">
@@ -50,14 +51,25 @@ const PoolSelectorModal: React.FC<PoolSelectorModalProps> = ({
               <button
                 key={position.id}
                 onClick={() => onSelect(position)}
-                className={`w-full p-3 text-left rounded-lg transition-colors ${
-                  selectedPosition?.id === position.id
+                className={`w-full p-3 text-left rounded-lg transition-colors ${selectedPosition?.id === position.id
                     ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-500'
                     : 'border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="font-medium">
+                  <div className="font-medium flex items-center gap-2">
+                    <div className="flex -space-x-2 mr-3">
+                      <img
+                        src={position.token0.img}
+                        alt={position.token0.symbol}
+                        className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                      />
+                      <img
+                        src={position.token1.img}
+                        alt={position.token1.symbol}
+                        className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+                      />
+                    </div>
                     {position.token0.symbol}/{position.token1.symbol}
                   </div>
                   <div className="text-sm text-green-500">
