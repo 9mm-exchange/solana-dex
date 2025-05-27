@@ -292,6 +292,7 @@ export interface PoolDataNew {
 }
 
 export interface TransformedPool {
+  poolAddress: string;
   token0: {
     symbol: string;
     logoURI: string;

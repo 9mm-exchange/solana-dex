@@ -28,6 +28,7 @@ import {
 import { PoolData, TokenData } from "../types";
 import { getPoolList } from "../utils/getPoolList";
 import { WalletSignTransactionError } from "@solana/wallet-adapter-base";
+import { calculateSwapAmounts } from "../program/web3";
 
 const SwapNew: React.FC = () => {
   const wallet = useWallet();
@@ -208,7 +209,7 @@ const SwapNew: React.FC = () => {
 
     setIsCalculating(true);
     try {
-      const result = await getSwapOut(
+      const result = await calculateSwapAmounts(
         wallet,
         sellTokenData.address,
         buyTokenData.address,
@@ -217,7 +218,9 @@ const SwapNew: React.FC = () => {
       );
       console.log("🚀 ~ calculateOutputAmount ~ result:", result);
       if (result) {
-        setBuyAmount(result);
+        setBuyAmount(result.outputAmount);
+        // You can also use the fee information here if needed
+        // result.tradeFee, result.protocolFee, result.fundFee, result.priceImpact
       } else {
         setBuyAmount(0);
       }

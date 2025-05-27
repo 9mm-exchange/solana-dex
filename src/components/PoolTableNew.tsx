@@ -13,24 +13,26 @@ const PoolTableNew = () => {
     const fetchPools = async () => {
       try {
         const rawPools = await getPoolList();
+        console.log("🚀 ~ fetchPools ~ rawPools:", rawPools)
         const poolList: TransformedPool[] = rawPools
-        .filter((pool: any) => pool.baseToken && pool.quoteToken)
+        .filter((pool: any) => pool.token0 && pool.token1)
         .map((pool: any) => ({
           token0: {
-            symbol: pool.baseToken.symbol,
-            logoURI: pool.baseToken.image,
-            mint: pool.baseToken.address,
+            symbol: pool.token0.symbol,
+            logoURI: pool.token0.image,
+            mint: pool.token0.address,
           },
           token1: {
-            symbol: pool.quoteToken.symbol,
-            logoURI: pool.quoteToken.image,
-            mint: pool.quoteToken.address,
+            symbol: pool.token1.symbol,
+            logoURI: pool.token1.image,
+            mint: pool.token1.address,
           },
           liquidity: pool.liquidity || '0',
           volume24h: pool.vol || '0',
           volumeChange24h: '0',
           fee24h: '0',
           apr: '0',
+          poolAddress: pool.address,
         }));
 
 
@@ -48,22 +50,22 @@ const PoolTableNew = () => {
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Pool
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Volume (24h)
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Volume Change
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Fees (24h)
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               APR
             </th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Action
             </th>
           </tr>
@@ -95,24 +97,24 @@ const PoolTableNew = () => {
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                 {pool.volume24h}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                 <span className={`font-medium ${
                   parseFloat(pool.volumeChange24h) >= 0 ? 'text-green-500' : 'text-red-500'
                 }`}>
                   {parseFloat(pool.volumeChange24h) >= 0 ? '+' : ''}{pool.volumeChange24h}%
                 </span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                 {pool.fee24h}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600 dark:text-purple-400">
+              <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-purple-600 dark:text-purple-400">
                 {pool.apr}%
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <Button size="sm" onClick={() => navigate(`/deposit-new?token0=${pool.token0.mint}&token1=${pool.token1.mint}`)}>
+              <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                <Button size="sm" onClick={() => navigate(`/deposit-new?pool=${pool.poolAddress}`)}>
                   Deposit Liquidity
                 </Button>
               </td>

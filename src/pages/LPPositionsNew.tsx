@@ -9,10 +9,13 @@ import PoolTableNew from '../components/PoolTableNew';
 import PositionCard from '../components/PositionCard';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { getPoolList } from '../utils/getPoolList';
+import { getPoolListWithWallet } from '../utils/getPoolList';
 import { PoolData, TokenData } from '../types';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 
 const LPPositionsNew: React.FC = () => {
+  const wallet = useWallet();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'top' | 'my'>('top');
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month' | 'all'>('day');
@@ -22,7 +25,7 @@ const LPPositionsNew: React.FC = () => {
   useEffect(() => {
     const fetchPools = async () => {
       try {
-        const poolList = await getPoolList();
+        const poolList = await getPoolListWithWallet(wallet.publicKey as PublicKey);
         console.log("🚀 ~ fetchPools ~ poolList:", poolList);
         setPools(poolList);
       } catch (error) {

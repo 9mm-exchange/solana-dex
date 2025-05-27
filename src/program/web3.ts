@@ -946,14 +946,127 @@ export const getSwapOut = async (
     const ratio = (tokenAmount * BigInt(1000000000)) / BigInt(token0Amount);
     console.log("🚀 ~ ratio1:", ratio)
     const amountOut = (ratio * BigInt(token1Amount)) / BigInt(1000000000)
-    const returnOut = fromBigInt(amountOut, token0Decimals)
+    const returnOut = fromBigInt(amountOut, token1Decimals)
     return returnOut;
   } else {
     const tokenAmount = toBigInt(amount, token1Decimals);
     const ratio = (tokenAmount * BigInt(1000000000)) / BigInt(token1Amount);
     console.log("🚀 ~ ratio:", ratio)
     const amountOut = (ratio * BigInt(token0Amount)) / BigInt(1000000000)
-    const returnOut = fromBigInt(amountOut, token1Decimals)
+    const returnOut = fromBigInt(amountOut, token0Decimals)
     return returnOut;
+  }
+}
+
+export const calculateSwapAmounts = async (
+  wallet: WalletContextState,
+  address0: string,
+  address1: string,
+  poolAddress: PublicKey,
+  amount: number,
+) => {
+  try {
+    const anchorWallet = convertWallet(wallet);
+    const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
+    anchor.setProvider(provider);
+    const program = new Program<RaydiumCpSwap>(
+      raydiumCpSwapIdl as RaydiumCpSwap,
+      provider
+    );
+
+    // Get pool state and config
+    const [configAddr] = await PublicKey.findProgramAddress(
+      [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
+      program.programId
+    );
+    
+    const poolState = await program.account.poolState.fetch(poolAddress);
+    const configData = await program.account.ammConfig.fetch(configAddr);
+    
+    // Get token decimals
+    const token0Decimals = poolState.mint0Decimals;
+    const token1Decimals = poolState.mint1Decimals;
+    
+    // Get current pool balances
+    const token0Info = await connection.getTokenAccountBalance(poolState.token0Vault);
+    const token1Info = await connection.getTokenAccountBalance(poolState.token1Vault);
+    
+    const token0Amount = BigInt(token0Info.value.amount);
+    const token1Amount = BigInt(token1Info.value.amount);
+
+    // Get fee rates from config
+    const tradeFeeRate = configData.tradeFeeRate.toNumber();
+    console.log("🚀 ~ tradeFeeRate:", tradeFeeRate);
+    const protocolFeeRate = configData.protocolFeeRate.toNumber();
+    console.log("🚀 ~ protocolFeeRate:", protocolFeeRate);
+    const fundFeeRate = configData.fundFeeRate.toNumber();
+    console.log("🚀 ~ fundFeeRate:", fundFeeRate);
+
+    if (address0 === poolState.token0Mint.toBase58()) {
+      // Swap token0 to token1
+      const inputAmount = toBigInt(amount, token0Decimals);
+      
+      // Calculate fees (in basis points, so divide by 10000)
+      const tradeFee = (inputAmount * BigInt(tradeFeeRate)) / BigInt(10000);
+      const protocolFee = (tradeFee * BigInt(protocolFeeRate)) / BigInt(10000);
+      const fundFee = (tradeFee * BigInt(fundFeeRate)) / BigInt(10000);
+      
+      // Calculate actual input amount after fees
+      const actualAmountIn = inputAmount - tradeFee - protocolFee - fundFee;
+      
+      // Calculate output using constant product formula: x * y = k
+      const constantBefore = token0Amount * token1Amount;
+      const newToken0Amount = token0Amount + actualAmountIn;
+      const newToken1Amount = constantBefore / newToken0Amount;
+      const outputAmount = token1Amount - newToken1Amount;
+      
+      // Convert back to decimal
+      const returnOut = fromBigInt(outputAmount, token1Decimals);
+      
+      return {
+        outputAmount: returnOut,
+        tradeFee: fromBigInt(tradeFee, token0Decimals),
+        protocolFee: fromBigInt(protocolFee, token0Decimals),
+        fundFee: fromBigInt(fundFee, token0Decimals),
+        priceImpact: ((returnOut / amount) * 100).toFixed(2) + "%"
+      };
+    } else {
+      // Swap token1 to token0
+      const inputAmount = toBigInt(amount, token1Decimals);
+      
+      // Calculate fees
+      const tradeFee = (inputAmount * BigInt(tradeFeeRate)) / BigInt(10000);
+      const protocolFee = (tradeFee * BigInt(protocolFeeRate)) / BigInt(10000);
+      const fundFee = (tradeFee * BigInt(fundFeeRate)) / BigInt(10000);
+      
+      // Calculate actual input amount after fees
+      const actualAmountIn = inputAmount - tradeFee - protocolFee - fundFee;
+      
+      // Calculate output using constant product formula: x * y = k
+      const constantBefore = token0Amount * token1Amount;
+      const newToken1Amount = token1Amount + actualAmountIn;
+      const newToken0Amount = constantBefore / newToken1Amount;
+      const outputAmount = token0Amount - newToken0Amount;
+      
+      // Convert back to decimal
+      const returnOut = fromBigInt(outputAmount, token0Decimals);
+      
+      return {
+        outputAmount: returnOut,
+        tradeFee: fromBigInt(tradeFee, token1Decimals),
+        protocolFee: fromBigInt(protocolFee, token1Decimals),
+        fundFee: fromBigInt(fundFee, token1Decimals),
+        priceImpact: ((returnOut / amount) * 100).toFixed(2) + "%"
+      };
+    }
+  } catch (error) {
+    console.error("Error calculating swap amounts:", error);
+    return {
+      outputAmount: 0,
+      tradeFee: 0,
+      protocolFee: 0,
+      fundFee: 0,
+      priceImpact: "0%"
+    };
   }
 }
