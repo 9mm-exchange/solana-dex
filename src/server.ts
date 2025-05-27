@@ -4,13 +4,13 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import tokenRoutes from './routes/token';
-import WebSocketServer from './websocket/server';
+// import WebSocketServer from './websocket/server';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const WS_PORT = process.env.WS_PORT || 5001;
+// const WS_PORT = process.env.WS_PORT || 5001;
 
 // Middleware
 app.use(cors());
@@ -31,8 +31,8 @@ mongoose.connect(process.env.MONGODB_URI as string)
     });
 
     // Start WebSocket server
-    const wss = new WebSocketServer(Number(WS_PORT));
-    console.log(`WebSocket server running on port ${WS_PORT}`);
+    // const wss = new WebSocketServer(Number(WS_PORT));
+    // console.log(`WebSocket server running on port ${WS_PORT}`);
   })
   .catch((error) => {
     console.error('MongoDB connection error:', error);

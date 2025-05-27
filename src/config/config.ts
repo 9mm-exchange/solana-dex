@@ -1,3 +1,4 @@
+import { Keypair } from "@solana/web3.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -11,3 +12,5 @@ try {
 export const MONGO_URL = process.env.MONGO_URL;
 export const PORT = process.env.PORT || 9000
 export const JWT_SECRET = process.env.JWT_SECRET || "JWT_SECRET";
+
+export const ADMIN = process.env.ADMIN_WALLET;

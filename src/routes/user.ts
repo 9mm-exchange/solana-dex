@@ -9,6 +9,7 @@ import nacl from "tweetnacl";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import jwt from "jsonwebtoken";
 import Token from '../models/Token';
+import { ADMIN } from "../config/config";
 
 const router = express.Router();
 
@@ -20,11 +21,12 @@ router.post("/", async (req, res) => {
 
   // Validate form
   const { body } = req;
+  console.log("🚀 ~ router.post ~ body:", body)
 
   const UserSchema = Joi.object().keys({
     // name: Joi.string().required(),
     wallet: Joi.string().required(),
-    isLedger: Joi.boolean().required(),
+    isLedger: Joi.number().required(),
   });
 
   const inputValidation = UserSchema.validate(body);
@@ -32,8 +34,9 @@ router.post("/", async (req, res) => {
   if (inputValidation.error) {
     return res.status(400).json({ error: inputValidation.error.details[0].message });
   }
-
+  
   const wallet = body.wallet;
+  console.log("🚀 ~ router.post ~ wallet:", wallet)
   const userData = await User.findOne({ wallet });
 
   console.log("userdata:", userData);
@@ -42,8 +45,8 @@ router.post("/", async (req, res) => {
 
   const existingPendingUser = await PendingUser.findOne({ wallet });
 
+  console.log("pending:", existingPendingUser);
   try {
-    console.log("pending:", existingPendingUser);
 
     if (!existingPendingUser) {
       const nonce = crypto.randomBytes(8).toString("hex");
@@ -75,7 +78,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// @route   POST /users/login
+// @route   POST /user/login
 // @desc    Resgister user
 // @access  Public
 router.post("/login", async (req, res) => {
@@ -84,6 +87,7 @@ router.post("/login", async (req, res) => {
     console.log(req.body);
     const { wallet } = req.body;
     const user = await User.findOne({ wallet });
+    console.log("🚀 ~ router.post ~ user:", user)
     if (!user) {
       res.status(404).json({ message: "User not found" });
     } else {
@@ -107,7 +111,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// @route   POST /users/:nonce
+// @route   POST /user/:nonce
 // @desc    Confirm and Register user
 // @access  Public
 router.post("/confirm", async (req, res) => {
@@ -126,7 +130,7 @@ router.post("/confirm", async (req, res) => {
     wallet: Joi.string().required(),
     nonce: Joi.string().required(),
     signature: Joi.string().required(),
-    isLedger: Joi.boolean().optional().required(),
+    isLedger: Joi.number().optional().required(),
   });
   const inputValidation = UserSchema.validate(body);
   console.log(inputValidation);
@@ -199,7 +203,21 @@ router.post("/confirm", async (req, res) => {
     console.log("Error: ", error);
   }
 });
-// @route   POST /users/:nonce
+
+// @route   POST /user/:nonce
+// @desc    Confirm and Register user
+// @access  Public
+router.post("/admin", async (req, res) => {
+  console.log("admin wallet: ", ADMIN)
+  console.log("req body: ", req.body)
+  const { wallet } = req.body;
+  if (wallet.toString() === ADMIN.toString()) {
+    return true;
+  } else {
+    return false;
+  }
+})
+// @route   POST /user/:nonce
 // @desc    Confirm and Register user
 // @access  Public
 router.post("/update/:id", async (req, res) => {
@@ -269,14 +287,14 @@ router.post("/addToken", async (req, res) => {
     console.log("🚀 ~ addToken:", wallet)
 
     // Validate token data
-    if (!token || !token.address || !token.symbol || !token.name || !token.img || !wallet) {
+    if (!token || !token.address || !token.symbol || !token.name || !wallet) {
       return res.status(400).json({ error: "Invalid token data" });
     }
-    
+
     // Check if token already exists
-    const existingToken = await Token.findOne({ 
-      address: token.address,
-      addedBy: wallet 
+    const existingToken = await Token.findOne({
+      mint: token.address,
+      addedBy: wallet
     });
     console.log("🚀 ~ router.post ~ existingToken:", existingToken)
     if (existingToken) {
@@ -285,11 +303,13 @@ router.post("/addToken", async (req, res) => {
 
     // Create new token
     const newToken = new Token({
-      address: token.address,
+      mint: token.address,
       symbol: token.symbol,
       name: token.name,
-      image: token.img,
-      addedBy: wallet
+      logoURI: token.img || "https://swap.pump.fun/tokens/usde.webp",
+      decimals: token.decimals || 9,
+      addedBy: wallet,
+      createdAt: new Date()
     });
 
     await newToken.save();
@@ -301,6 +321,7 @@ router.post("/addToken", async (req, res) => {
 });
 
 router.post("/getCustomList", async (req, res) => {
+  console.log("getCustomList");
   try {
     const { wallet } = req.body;
     console.log("🚀 ~ router.get ~ wallet:", wallet)

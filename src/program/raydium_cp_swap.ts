@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/raydium_cp_swap.json`.
  */
 export type RaydiumCpSwap = {
-  "address": "7QLzPUCeRzCvXNMQshV2ehmPG3jTZXPkAANCjaSeKN4V",
+  "address": "8sX1gV38bzWoJhKEvjujCLvRR2Z16i5zcjZ779Lvce8Y",
   "metadata": {
     "name": "raydiumCpSwap",
     "version": "0.1.1",
@@ -663,10 +663,16 @@ export type RaydiumCpSwap = {
           }
         },
         {
-          "name": "token0Mint"
+          "name": "token0Mint",
+          "docs": [
+            "Token_0 mint, the key must smaller then token_1 mint."
+          ]
         },
         {
-          "name": "token1Mint"
+          "name": "token1Mint",
+          "docs": [
+            "Token_1 mint, the key must grater then token_0 mint."
+          ]
         },
         {
           "name": "lpMint",
@@ -1656,6 +1662,10 @@ export type RaydiumCpSwap = {
         "kind": "struct",
         "fields": [
           {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
             "name": "poolId",
             "type": "pubkey"
           },
@@ -1682,10 +1692,6 @@ export type RaydiumCpSwap = {
           {
             "name": "liquidity",
             "type": "u64"
-          },
-          {
-            "name": "creator",
-            "type": "pubkey"
           }
         ]
       }
@@ -1705,10 +1711,6 @@ export type RaydiumCpSwap = {
           {
             "name": "owner",
             "type": "pubkey"
-          },
-          {
-            "name": "lpAmountIn",
-            "type": "u64"
           },
           {
             "name": "lpAmountBefore",
@@ -2044,14 +2046,14 @@ export type RaydiumCpSwap = {
           {
             "name": "inputAmount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },
           {
             "name": "outputAmount",
             "docs": [
-              "calcluate result without transfer fee"
+              "cacluate result without transfer fee"
             ],
             "type": "u64"
           },

@@ -1,7 +1,7 @@
 // controllers/authController.ts
 import { Request, Response } from 'express';
 import User from '../models/User';
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -28,7 +28,7 @@ export const registerUser = async (req: Request, res: Response) => {
     const newUser = new User({
       userName,
       email,
-      password: password ? await bcrypt.hash(password, 10) : undefined,
+      // password: password ? await bcrypt.hash(password, 10) : undefined,
       googleId,
       wallet
     });
@@ -67,12 +67,12 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     // If password is provided, verify it
-    if (password && user.password) {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-    }
+    // if (password && user.password) {
+    //   const isMatch = await bcrypt.compare(password, user.password);
+    //   if (!isMatch) {
+    //     return res.status(400).json({ message: 'Invalid credentials' });
+    //   }
+    // }
 
     // Create JWT token
     const token = jwt.sign(

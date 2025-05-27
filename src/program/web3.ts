@@ -67,7 +67,15 @@ const handleCreatePoolEvent = async (event: any) => {
     const token0Amount = event.token0Amount.toNumber();
     const token1Amount = event.token1Amount.toNumber();
     const lpMint = event.lpMint.toString();
-    const liquidity = event.liquidity.toNumber();
+    const liquidity = event.liquidity.toNumber() / 1000000000;
+    console.log("poolAddress", poolAddress);
+    console.log("creator", creator);
+    console.log("token0Mint", token0Mint);
+    console.log("token1Mint", token1Mint);
+    console.log("token0Amount", token0Amount);
+    console.log("token1Amount", token1Amount);
+    console.log("lpMint", lpMint);
+    console.log("liquidity", liquidity);
 
     // Create new pool in database
     const newPool = new PoolModel({
@@ -82,6 +90,7 @@ const handleCreatePoolEvent = async (event: any) => {
       volume24h: '0',
       createdAt: new Date()
     });
+    console.log("🚀 ~ handleCreatePoolEvent ~ newPool:", newPool)
 
     await newPool.save();
     console.log("Pool created successfully:", newPool);
@@ -155,7 +164,7 @@ const handleCreatePoolEvent = async (event: any) => {
 const handleSwapEvent = async (event: any) => {
   console.log("SwapEvent: ", event);
   try {
-    const poolAddress = event.poolId.toString();
+    const poolAddress = event.poolId.toBase58();
     console.log("🚀 ~ handleSwapEvent ~ poolAddress:", poolAddress);
     const user = event.user.toString();
     console.log("🚀 ~ handleSwapEvent ~ user:", user);
@@ -208,8 +217,8 @@ const handleLpChangeEvent = async (event: any) => {
     console.log("🚀 ~ handleLpChangeEvent ~ poolAddress:", poolAddress);
     const owner = event.owner.toString();
     console.log("🚀 ~ handleLpChangeEvent ~ owner:", owner);
-    const lpAmountIn = event.lpAmountIn.toNumber() / Math.pow(10, lpDecimal);
-    console.log("🚀 ~ handleLpChangeEvent ~ lpAmountIn:", lpAmountIn);
+    // const lpAmountIn = event.lpAmountIn.toNumber() / Math.pow(10, lpDecimal);
+    // console.log("🚀 ~ handleLpChangeEvent ~ lpAmountIn:", lpAmountIn);
     const lpSupply = event.lpAmountBefore.toNumber() / Math.pow(10, lpDecimal);
     console.log("🚀 ~ handleLpChangeEvent ~ lpSupply:", lpSupply);
     const token0VaultBefore =
@@ -240,9 +249,12 @@ const handleLpChangeEvent = async (event: any) => {
 
     const pool = await PoolModel.findOne({ poolAddress: poolAddress });
 
+    const currentLpAmount = Number(pool?.liquidity);
+    console.log("🚀 ~ handleLpChangeEvent ~ currentLpAmount:", currentLpAmount)
+    console.log("🚀 ~ handleLpChangeEvent ~ pool:", pool)
     const newTx = {
       holder: owner,
-      amount: lpAmountIn,
+      amount: lpSupply - currentLpAmount,
       direction: type,
       tx: "tx"
     };
@@ -275,7 +287,11 @@ export const listenerForEvents = async () => {
   // Add listeners for each event
   const createPoolId = program.addEventListener(
     "createPoolEvent",
-    handleCreatePoolEvent
+    (event, slot, signature) => 
+      {
+        console.log("Pool creation event : \n", signature, slot, '\n')
+        handleCreatePoolEvent(event);
+      }
   );
   const swapId = program.addEventListener("swapEvent", handleSwapEvent);
   const lpChangeId = program.addEventListener(
