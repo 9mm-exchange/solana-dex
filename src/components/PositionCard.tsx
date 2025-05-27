@@ -14,12 +14,12 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
           <div className="flex items-center">
             <div className="relative">
               <img 
-                src={position.token0.logoURI} 
+                src={position.token0.img} 
                 alt={position.token0.symbol} 
                 className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800" 
               />
               <img 
-                src={position.token1.logoURI} 
+                src={position.token1.img} 
                 alt={position.token1.symbol} 
                 className="absolute -bottom-0 -right-4 w-8 h-8 rounded-full border-2 border-white dark:border-gray-800" 
               />
@@ -49,10 +49,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
             <div className="font-bold text-green-500">{position.earned}</div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit-new?token0=${position.token0.mint}&token1=${position.token1.mint}`)}>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit-new?pool=${position.poolAddress}`)}>
               Deposit 
             </Button>
-            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw-new?token0=${position.token0.mint}&token1=${position.token1.mint}`)}>
+            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw-new?pool=${position.poolAddress}`)}>
               Withdraw
             </Button>
           </div>

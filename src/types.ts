@@ -193,6 +193,7 @@ export interface EmptyStateProps {
 
 export interface PositionCardProps {
   position: {
+    poolAddress: string;
     token0: TokenData;
     token1: TokenData;
     liquidity: string;

@@ -7,6 +7,7 @@ import { AMM_CONFIG_SEED } from "../program/constant";
 import { RaydiumCpSwap } from "../program/raydium_cp_swap";
 import raydiumCpSwapIdl from "../program/raydium_cp_swap.json";
 import { commitmentLevel, connection } from "../program/web3";
+import { getTokenDecimals } from "../program/utils";
 
 // type WalletCompatible = anchor.Wallet;
 
@@ -33,46 +34,42 @@ function convertWallet(wallet: WalletContextState): WalletCompatible {
 
 export async function calculateLpAmountForDeposit(
   wallet: WalletContextState,
-  token0Amount: BN,
-  token1Amount: BN,
+  token0Amount: number,
+  token1Amount: number,
   poolAddress: PublicKey,
-): Promise<BN> {
-  console.log("🚀 ~ calculateLpAmountForDeposit ~ token0Amount:", token0Amount.toNumber())
-  console.log("🚀 ~ calculateLpAmountForDeposit ~ token1Amount:", token1Amount.toNumber())
-  console.log("🚀 ~ calculateLpAmountForDeposit ~ poolAddress:", poolAddress.toBase58())
+): Promise<{lpAmount: number, token0Amount: number, token1Amount: number}> {
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
   anchor.setProvider(provider);
-  // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
     raydiumCpSwapIdl as RaydiumCpSwap,
     provider
   );
 
   // Get pool state
-  const poolState = await program.account["poolState"].fetch(poolAddress);
+  const poolState = await program.account.poolState.fetch(poolAddress);
   
-  const [configAddr, bump] = await PublicKey.findProgramAddress(
-    [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
-    program.programId
-  );
-  const configData = await program.account["ammConfig"].fetch(configAddr);
-  const token0Decimals = poolState.mint0Decimals;
-  const token1Decimals = poolState.mint1Decimals;
   const token0Info = await connection.getTokenAccountBalance(poolState.token0Vault);
   const token1Info = await connection.getTokenAccountBalance(poolState.token1Vault);
-  const token0TotalAmount = token0Info.value.amount;
-  const token1TotalAmount = token1Info.value.amount;
-  // Calculate the ratio of your token0 contribution
-  const token0Ratio = token0Amount.mul(new BN(1000000000)).div(new BN(token0TotalAmount));
+  const token0TotalAmount = Number(token0Info.value.amount);
+  const token1TotalAmount = Number(token1Info.value.amount);
+  const totalLpSupply = Number(poolState.lpSupply);
+
+  // Handle initial deposit case (when pool is empty)
+  if (token0TotalAmount === 0 && token1TotalAmount === 0) {
+    // For initial deposit, use the geometric mean of the two token amounts
+    // This ensures a fair initial LP token distribution
+    const geometricMean = Math.sqrt(token0Amount * token1Amount);
+    return {lpAmount: Math.floor(geometricMean), token0Amount: token0TotalAmount, token1Amount: token1TotalAmount};
+  }
+
+  // For subsequent deposits, calculate based on the ratio of contributions
+  const ratio = token0Amount / (token0TotalAmount / Math.pow(10, poolState.mint0Decimals));
   
-  // Calculate the ratio of your token1 contribution
-  const token1Ratio = token1Amount.mul(new BN(1000000000)).div(new BN(token1TotalAmount));
-  // Take the minimum ratio to ensure proper proportion
-  const minRatio = BN.min(token0Ratio, token1Ratio);
+  // Calculate LP tokens based on the ratio and current LP supply
+  const lpAmount = Math.floor(ratio * totalLpSupply);
+
+  const lpDecimal = await getTokenDecimals(poolState.lpMint.toBase58());
   
-  // Calculate LP tokens based on the ratio
-  const lpAmount = poolState.lpSupply.mul(minRatio).div(new BN(1000000000));
-  
-  return lpAmount;
+  return {lpAmount: lpAmount / Math.pow(10, lpDecimal), token0Amount: token0TotalAmount, token1Amount: token1TotalAmount};
 }

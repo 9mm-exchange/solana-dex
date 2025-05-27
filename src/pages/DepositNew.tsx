@@ -78,6 +78,16 @@ const DepositNew: React.FC = () => {
         const poolList = await getPoolList();
         console.log("🚀 ~ fetchPools ~ poolList:", poolList);
         setPools(poolList);
+
+        // Check URL for pool parameter and select the pool if it exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const poolAddress = urlParams.get('pool');
+        if (poolAddress) {
+          const poolFromUrl = poolList.find(pool => pool.address === poolAddress);
+          if (poolFromUrl) {
+            handlePoolSelect(poolFromUrl);
+          }
+        }
       } catch (error) {
         console.error("Error fetching pools:", error);
       }
@@ -172,7 +182,6 @@ const DepositNew: React.FC = () => {
             new PublicKey(selectedPool.address),
             numericValue
           );
-          console.log("🚀 ~ handleInputChange ~ result:", result) 
           setBaseAmount(result);
 
           // Update the LP token calculation
@@ -209,7 +218,6 @@ const DepositNew: React.FC = () => {
             new PublicKey(selectedPool.address),
             numericValue
           );
-          console.log("🚀 ~ handleInputChange ~ result:", result)
           setQuoteAmount(result);
 
           // Update the LP token calculation
@@ -284,6 +292,9 @@ const DepositNew: React.FC = () => {
     setSelectedPool(pool);
     setShowPoolModal(false);
 
+    const newUrl = `${window.location.pathname}?pool=${pool.address}`;
+    window.history.pushState({}, '', newUrl);
+
     // Set tokens based on selected pool
     setQuoteTokenData({
       id: pool.token1.symbol,
@@ -353,35 +364,48 @@ const DepositNew: React.FC = () => {
       const quoteDecimal = await getTokenDecimals(address0);
       const baseDecimal = await getTokenDecimals(address1);
 
-      const lpMint = selectedPool?.lpMint;
+      // Get LP mint address
+      const lpMint = await getLpMint(wallet, address0, address1);
       if (!lpMint) {
         errorAlert("Failed to get LP mint address");
         return;
       }
 
-      const lpDecimal = await getTokenDecimals(lpMint);
+      // Convert amounts to raw values with proper decimal scaling
+      const quoteAmountRaw = Math.floor(quoteAmount * Math.pow(10, quoteDecimal));
+      const baseAmountRaw = Math.floor(baseAmount * Math.pow(10, baseDecimal));
 
-      const quoteAmountBN = new BN(quoteAmount * Math.pow(10, quoteDecimal));
-      const baseAmountBN = new BN(baseAmount * Math.pow(10, baseDecimal));
+      let result;
+      if (address0 < address1) {
+        const { lpAmount, token0Amount, token1Amount } = await calculateLpAmountForDeposit(
+          wallet,
+          quoteAmountRaw,
+          baseAmountRaw,
+          new PublicKey(poolAddress)
+        );
+        result = await deposit(
+          wallet,
+          token0Amount,
+          token1Amount,
+          lpAmount,
+          new PublicKey(poolAddress)
+        );
+      } else {
+        const { lpAmount, token0Amount, token1Amount } = await calculateLpAmountForDeposit(
+          wallet,
+          baseAmountRaw,
+          quoteAmountRaw,
+          new PublicKey(poolAddress)
+        );
+        result = await deposit(
+          wallet,
+          token0Amount,
+          token1Amount,
+          lpAmount,
+          new PublicKey(poolAddress)
+        );
+      }
 
-      const lpOutAmount = await calculateLpAmountForDeposit(
-        wallet,
-        quoteAmountBN,
-        baseAmountBN,
-        new PublicKey(poolAddress)
-      );
-
-      const result = await deposit(
-        wallet,
-        new PublicKey(address0),
-        new PublicKey(address1),
-        quoteAmountBN.toNumber(),
-        baseAmountBN.toNumber(),
-        lpOutAmount.toNumber(),
-        new PublicKey(poolAddress)
-      );
-
-      console.log("🚀 ~ handleDeposite ~ result:", result);
 
       if (result instanceof WalletSignTransactionError) {
         warningAlert("Transaction was not signed. Please try again.");
@@ -390,9 +414,6 @@ const DepositNew: React.FC = () => {
 
       if (result && typeof result === "string") {
         showNotification('success', 'Transaction confirmed!', result);
-        // successAlert(
-        //   `Successfully deposited ${quoteAmount} ${quoteTokenData.id} and ${baseAmount} ${baseTokenData.id}`
-        // );
         setQuoteAmount(0);
         setBaseAmount(0);
       } else {

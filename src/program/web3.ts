@@ -192,8 +192,6 @@ export const createPool = async (
 
 export const deposit = async (
   wallet: WalletContextState,
-  quoteToken: PublicKey,
-  baseToken: PublicKey,
   quoteAmount: number,
   baseAmount: number,
   lpAmount: number,
@@ -203,128 +201,149 @@ export const deposit = async (
   console.log("🚀 ~ deposit ~ quoteAmount:", quoteAmount);
   console.log("🚀 ~ deposit ~ baseAmount:", baseAmount);
 
+  if (!wallet.publicKey || !connection) {
+    errorAlert("Wallet Not Connected");
+    return "WalletError";
+  }
+
+  if (!poolAddress) {
+    errorAlert("Invalid pool address");
+    return "PoolError";
+  }
+
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, {
     preflightCommitment: commitmentLevel,
   });
   anchor.setProvider(provider);
 
-  // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
-      raydiumCpSwapIdl as RaydiumCpSwap,
-      provider
-    );
-
-  // Check if wallet is connected
-  if (!wallet.publicKey || !connection) {
-    errorAlert("Wallet Not Connected");
-    return "WalletError";
-  }
-
-  const [configAddr] = await PublicKey.findProgramAddress(
-    [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
-    program.programId
+    raydiumCpSwapIdl as RaydiumCpSwap,
+    provider
   );
-  console.log("configAddr:", configAddr.toBase58());
-
-  const [auth] = await PublicKey.findProgramAddress([Buffer.from(AUTH_SEED)], program.programId);
-  console.log("auth", auth.toBase58());
-
-  // const [poolAddress] = await PublicKey.findProgramAddress(
-  //   [
-  //     Buffer.from(POOL_SEED),
-  //     configAddr.toBuffer(),
-  //     quoteToken.toBuffer(),
-  //     baseToken.toBuffer(),
-  //   ],
-  //   program.programId
-  // );
-  console.log("poolAddress: ", poolAddress.toBase58());
-
-  const [lpMint] = await PublicKey.findProgramAddress(
-    [Buffer.from(POOL_LP_MINT_SEED), poolAddress.toBuffer()],
-    program.programId
-  );
-  console.log("lpMint: ", lpMint.toBase58());
-
-  const creatorLpTokenAddr = getAssociatedTokenAccount(wallet.publicKey, lpMint);
-  console.log("creatorLpTokenAddr: ", creatorLpTokenAddr.toBase58());
-
-  // Check if ATA exists
-  const accountInfo = await connection.getAccountInfo(creatorLpTokenAddr);
-  let createATAIx: TransactionInstruction | null = null;
-
-  if (!accountInfo) {
-    console.log("Associated Token Account does not exist. Creating ATA...");
-    // Add the instruction to create the ATA
-    createATAIx = createAssociatedTokenAccountIdempotentInstruction(
-      wallet.publicKey,
-      creatorLpTokenAddr,
-      wallet.publicKey,
-      lpMint
-    );
-  }
-
-  const [observationAddr] = await PublicKey.findProgramAddress(
-    [Buffer.from(OBSERVATION_SEED), poolAddress.toBuffer()],
-    program.programId
-  );
-  console.log("observationAddr: ", observationAddr.toBase58());
-
-  const poolState = await program.account.poolState.fetch(poolAddress);
-  console.log("poolState: ", poolState);
-
-  const creatorToken0 = getAssociatedTokenAddressSync(
-    quoteToken,
-    wallet.publicKey,
-    false,
-    poolState.token0Program
-  );
-  console.log("creatorToken0: ", creatorToken0.toBase58());
-
-  const creatorToken1 = getAssociatedTokenAddressSync(
-    baseToken,
-    wallet.publicKey,
-    false,
-    poolState.token1Program
-  );
-  console.log("creatorToken1: ", creatorToken1.toBase58());
-
-  const vault0 = poolState.token0Vault;
-  const token0TotalAmount = (await connection.getTokenAccountBalance(vault0)).value.amount;
-
-  const vault1 = poolState.token1Vault;
-  const token1TotalAmount = (await connection.getTokenAccountBalance(vault1)).value.amount;
 
   try {
+    const [configAddr] = await PublicKey.findProgramAddress(
+      [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
+      program.programId
+    );
+    console.log("configAddr:", configAddr.toBase58());
+
+    const [auth] = await PublicKey.findProgramAddress([Buffer.from(AUTH_SEED)], program.programId);
+    console.log("auth", auth.toBase58());
+
+    console.log("poolAddress: ", poolAddress.toBase58());
+
+    const [lpMint] = await PublicKey.findProgramAddress(
+      [Buffer.from(POOL_LP_MINT_SEED), poolAddress.toBuffer()],
+      program.programId
+    );
+    console.log("lpMint: ", lpMint.toBase58());
+
+    const poolState = await program.account.poolState.fetch(poolAddress);
+    console.log("poolState: ", poolState);
+
+    // Get vault accounts to check their mints
+    const vault0Info = await connection.getAccountInfo(poolState.token0Vault);
+    const vault1Info = await connection.getAccountInfo(poolState.token1Vault);
+    
+    if (!vault0Info || !vault1Info) {
+      throw new Error("Failed to fetch vault account info");
+    }
+    
+    // Get the mint addresses from the vault accounts
+    const vault0Mint = new PublicKey(vault0Info.data.slice(0, 32));
+    const vault1Mint = new PublicKey(vault1Info.data.slice(0, 32));
+
+    // Create associated token accounts with the correct mints and programs
+    const creatorLpTokenAddr = await getAssociatedTokenAddressSync(
+      lpMint,
+      wallet.publicKey,
+      false,
+      TOKEN_PROGRAM_ID
+    );
+    console.log("creatorLpTokenAddr: ", creatorLpTokenAddr.toBase58());
+
+    const creatorToken0 = await getAssociatedTokenAddressSync(
+      vault0Mint, // Use vault's mint
+      wallet.publicKey,
+      false,
+      poolState.token0Program
+    );
+    console.log("creatorToken0: ", creatorToken0.toBase58());
+
+    const creatorToken1 = await getAssociatedTokenAddressSync(
+      vault1Mint, // Use vault's mint
+      wallet.publicKey,
+      false,
+      poolState.token1Program
+    );
+    console.log("creatorToken1: ", creatorToken1.toBase58());
+
+    // Create instructions to create all necessary associated token accounts
+    const createLpAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey, // payer
+      creatorLpTokenAddr, // ata
+      wallet.publicKey, // owner
+      lpMint, // mint
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const createToken0AtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey, // payer
+      creatorToken0, // ata
+      wallet.publicKey, // owner
+      vault0Mint, // mint from vault
+      poolState.token0Program,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const createToken1AtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey, // payer
+      creatorToken1, // ata
+      wallet.publicKey, // owner
+      vault1Mint, // mint from vault
+      poolState.token1Program,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const vault0 = poolState.token0Vault;
+    const vault1 = poolState.token1Vault;
+
     const depositIx = await program.methods
-      .deposit(new BN(lpAmount), new BN(token0TotalAmount), new BN(token1TotalAmount))
+      .deposit(new BN(lpAmount), new BN(quoteAmount), new BN(baseAmount))
       .accounts({
         owner: wallet.publicKey,
+        poolState: poolAddress,
+        ownerLpToken: creatorLpTokenAddr,
         token0Account: creatorToken0,
         token1Account: creatorToken1,
-        lpMint: lpMint,
-        ownerLpToken: creatorLpTokenAddr,
-        poolState: poolAddress,
         token0Vault: vault0,
         token1Vault: vault1,
-        vault0Mint: poolState.token0Mint,
-        vault1Mint: poolState.token1Mint,
+        vault0Mint: vault0Mint,
+        vault1Mint: vault1Mint,
+        lpMint: lpMint
       })
       .instruction();
 
     const tx = new Transaction();
-    if (createATAIx) tx.add(createATAIx);
+    // Add create ATA instructions
+    tx.add(createLpAtaIx);
+    tx.add(createToken0AtaIx);
+    tx.add(createToken1AtaIx);
     tx.add(depositIx);
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
 
     const res = await execTx(tx, connection, wallet);
-
     return res;
   } catch (error) {
     console.error("Transaction failed:", error);
+    if (error instanceof Error) {
+      errorAlert(error.message);
+    }
     return "TransactionError";
   }
 };

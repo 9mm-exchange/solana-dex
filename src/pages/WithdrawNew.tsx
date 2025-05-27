@@ -1,5 +1,5 @@
 "use client";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, WalletContextState } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { ChevronDown } from "lucide-react";
 import React, { ChangeEvent, useContext, useEffect, useState } from "react";
@@ -15,9 +15,39 @@ import WarningAlert from "../components/ui/WarningAlert";
 import { useTransactionNotifications } from "../context/TransactionContext";
 import UserContext from "../context/UserContext";
 import { getTokenDecimals } from "../program/utils";
-import { getLpMint, getTokenBalance, withdraw } from "../program/web3";
+import { getLpMint, getTokenBalance, withdraw, connection, commitmentLevel } from "../program/web3";
 import { PositionData, TokenData } from "../types";
 import { getPoolList } from "../utils/getPoolList";
+import { calculateLpAmountForDeposit } from "../utils/getLpOutAmount";
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { RaydiumCpSwap } from "../program/raydium_cp_swap";
+import raydiumCpSwapIdl from "../program/raydium_cp_swap.json";
+import { AMM_CONFIG_SEED, POOL_SEED } from "../program/constant";
+import { u16ToBytes } from "@raydium-io/raydium-sdk";
+import { Transaction, VersionedTransaction } from "@solana/web3.js";
+import { calculateTokenAmounts } from "../utils/calculateTokenAmounts";
+
+type WalletCompatible = {
+  publicKey: anchor.web3.PublicKey;
+  signTransaction: <T extends Transaction | VersionedTransaction>(tx: T) => Promise<T>;
+  signAllTransactions: <T extends Transaction | VersionedTransaction>(txs: T[]) => Promise<T[]>;
+};
+
+// Convert the wallet to be compatible with Anchor
+function convertWallet(wallet: WalletContextState): WalletCompatible {
+  if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
+    throw new Error("Wallet is not fully connected");
+  }
+
+  return {
+    publicKey: wallet.publicKey,
+    signTransaction: <T extends Transaction | VersionedTransaction>(tx: T) =>
+      wallet.signTransaction!(tx) as Promise<T>,
+    signAllTransactions: <T extends Transaction | VersionedTransaction>(txs: T[]) =>
+      wallet.signAllTransactions!(txs) as Promise<T[]>
+  };
+}
 
 const WithdrawLPNew: React.FC = () => {
   const wallet = useWallet();
@@ -107,6 +137,16 @@ const WithdrawLPNew: React.FC = () => {
           lpMint: pool.lpMint
         }));
         setPositions(transformedPositions);
+
+        // Check URL for pool parameter and select the position if it exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const poolAddress = urlParams.get('pool');
+        if (poolAddress) {
+          const positionFromUrl = transformedPositions.find(position => position.address === poolAddress);
+          if (positionFromUrl) {
+            handlePositionSelect(positionFromUrl);
+          }
+        }
       } catch (error) {
         console.error("Error fetching positions:", error);
       }
@@ -165,6 +205,36 @@ const WithdrawLPNew: React.FC = () => {
     setlpTokenAmount(lpBalance);
   }
 
+  const calculateTokenAmountsForLp = async (lpAmount: number) => {
+    if (!wallet.publicKey || !token0Data?.address || !token1Data?.address || !lpAmount) {
+      setQuoteAmount(0);
+      setBaseAmount(0);
+      return;
+    }
+
+    try {
+      const anchorWallet = convertWallet(wallet);
+      const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
+      anchor.setProvider(provider);
+      const program = new Program<RaydiumCpSwap>(raydiumCpSwapIdl as RaydiumCpSwap, provider);
+
+      const { token0Amount, token1Amount } = await calculateTokenAmounts(
+        program,
+        token0Data.address,
+        token1Data.address,
+        lpAmount
+      );
+      const token0Decimals = await getTokenDecimals(token0Data.address);
+      const token1Decimals = await getTokenDecimals(token1Data.address);
+      setQuoteAmount(token0Amount * Math.pow(10, token0Decimals));
+      setBaseAmount(token1Amount * Math.pow(10, token1Decimals));
+    } catch (error) {
+      console.error("Error calculating token amounts:", error);
+      setQuoteAmount(0);
+      setBaseAmount(0);
+    }
+  };
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     const numericValue = Number(value);
@@ -176,6 +246,7 @@ const WithdrawLPNew: React.FC = () => {
         setBaseAmount(numericValue);
       } else if (id === "lpTokenAmount") {
         setlpTokenAmount(numericValue);
+        calculateTokenAmountsForLp(numericValue);
       }
     }
   };
@@ -206,6 +277,10 @@ const WithdrawLPNew: React.FC = () => {
 
     setSelectedPosition(position);
     setShowPositionModal(false);
+
+    // Update URL with pool address
+    const newUrl = `${window.location.pathname}?pool=${position.address}`;
+    window.history.pushState({}, '', newUrl);
 
     // Set tokens based on selected pool
     settoken0Data({
@@ -309,7 +384,7 @@ const WithdrawLPNew: React.FC = () => {
               </span>
               {token0Data?.id && (
                 <span className="text-gray-500 dark:text-gray-400">
-                  Balance: {lpBalance}
+                  LP Balance: {lpBalance}
                 </span>
               )}
             </div>
