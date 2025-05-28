@@ -28,7 +28,7 @@ export const execTx = async (
         const confirmed = await connection.confirmTransaction(txid, commitment);
         console.log("err ", confirmed.value.err);
         if(confirmed.value.err === null) {
-          return txid;
+          return {txid};
         } else {
           return null;
         }

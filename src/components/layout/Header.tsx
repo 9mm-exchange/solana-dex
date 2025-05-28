@@ -18,11 +18,11 @@ const Header: React.FC = () => {
   const [gasPriority, setGasPriority] = useState<'low' | 'medium' | 'high'>('medium');
 
   const navItems = [
-    { name: 'Swap', path: '/swap-new' },
-    { name: 'Positions', path: '/lp-positions-new' },
-    { name: 'Create', path: '/create-lp-new' },
-    { name: 'Deposit', path: '/deposit-new' },
-    { name: 'Withdraw', path: '/withdraw-new' },
+    { name: 'Swap', path: '/swap' },
+    { name: 'Positions', path: '/lp-positions' },
+    { name: 'Create', path: '/create-lp' },
+    { name: 'Deposit', path: '/deposit' },
+    { name: 'Withdraw', path: '/withdraw' },
   ];
 
   const handleSaveSettings = () => {

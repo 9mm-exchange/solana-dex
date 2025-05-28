@@ -18,7 +18,7 @@ const PoolInfoCard: React.FC<PoolInfoCardProps> = ({
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-gray-500 dark:text-gray-400">Pool Share</span>
-          <span>0.023%</span>
+          <span>0.01%</span>
         </div>
         
         <div className="flex justify-between">
@@ -28,7 +28,7 @@ const PoolInfoCard: React.FC<PoolInfoCardProps> = ({
         
         <div className="flex justify-between">
           <span className="text-gray-500 dark:text-gray-400">Exchange Rate</span>
-          <span>1 {token0.symbol} = {(token0.price! / token1.price!).toFixed(6)} {token1.symbol}</span>
+          <span>1 {token0.symbol} = {(amount1! / amount0!).toFixed(6)} {token1.symbol}</span>
         </div>
         
         {!poolExists && (

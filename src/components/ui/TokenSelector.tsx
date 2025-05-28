@@ -1,13 +1,13 @@
 import { ChevronRight, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { tokens } from '../../data/mockData';
-import { Token } from '../../types';
+import { TokenData } from '../../types';
 
 interface TokenSelectorProps {
-  onSelect: (token: Token) => void;
+  onSelect: (token: TokenData) => void;
   onClose: () => void;
-  excludeToken?: Token | null;
-  selectedToken?: Token | null;
+  excludeToken?: TokenData | null;
+  selectedToken?: TokenData | null;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({ 

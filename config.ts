@@ -7,12 +7,6 @@ export const TokenList = [
   { id: "PENGU", text: "Pudgy Penguins", address: "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv", img: "https://swap.pump.fun/tokens/pengu.webp" },
   { id: "WLD", text: "Worldcoin (Wormhole)", address: "DN4L5JE9VuGpMt1SsEWqyybUqyrYuWuywmTq7Q5GVDFK", img: "https://swap.pump.fun/tokens/wld.webp" },
   { id: "DRIFT", text: "Drift", address: "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7", img: "https://swap.pump.fun/tokens/drift.webp" },
-  { id: "USDe", text: "USDe", address: "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", img: "https://swap.pump.fun/tokens/usde.webp" },
-  { id: "TRX", text: "Tron", address: "GbbesPbaYh5uiAZSYNXTc7w9jty1rpg3P9L4JeN4LkKc", img: "https://swap.pump.fun/tokens/trx.webp" },
-  { id: "APT", text: "Aptos", address: "DTDQEQWgBmnnJ7YGVoQrXkkroTEUkYgAfhEVb8CrnkpC", img: "https://swap.pump.fun/tokens/aptos.webp" },
-  { id: "PENGU", text: "Pudgy Penguins", address: "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv", img: "https://swap.pump.fun/tokens/pengu.webp" },
-  { id: "WLD", text: "Worldcoin (Wormhole)", address: "DN4L5JE9VuGpMt1SsEWqyybUqyrYuWuywmTq7Q5GVDFK", img: "https://swap.pump.fun/tokens/wld.webp" },
-  { id: "DRIFT", text: "Drift", address: "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7", img: "https://swap.pump.fun/tokens/drift.webp" },
 ]
 
 export const TestPoolList = [

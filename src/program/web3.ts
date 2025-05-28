@@ -342,7 +342,7 @@ export const deposit = async (
   } catch (error) {
     console.error("Transaction failed:", error);
     if (error instanceof Error) {
-      errorAlert(error.message);
+      return error.message;
     }
     return "TransactionError";
   }
@@ -465,8 +465,8 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
   }
 }
 
-export const swap = async (wallet: WalletContextState, selltokenMint: string, poolAddress: PublicKey, amount: number, direction: number) => {
-  console.log("sell token: ", selltokenMint);
+export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, amount: number, direction: number) => {
+  console.log("🚀 ~ swap ~ poolAddress:", poolAddress)
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
   anchor.setProvider(provider);
@@ -501,7 +501,7 @@ export const swap = async (wallet: WalletContextState, selltokenMint: string, po
   const token1Decimals = await getTokenDecimals(poolState.token1Mint.toBase58());
 
   let decimals: number;
-  if (direction == 1) {
+  if (direction == 0) {
     decimals = token0Decimals;
   } else {
     decimals = token1Decimals;
@@ -540,7 +540,7 @@ export const swap = async (wallet: WalletContextState, selltokenMint: string, po
 
   let tx = new Transaction();
   try {
-    if (direction == 1) {
+    if (direction == 0) {
       tx = await program.methods
         .swapBaseInput(new BN(amount * Math.pow(10, decimals)), new BN(0))
         .accounts({
@@ -996,11 +996,8 @@ export const calculateSwapAmounts = async (
 
     // Get fee rates from config
     const tradeFeeRate = configData.tradeFeeRate.toNumber();
-    console.log("🚀 ~ tradeFeeRate:", tradeFeeRate);
     const protocolFeeRate = configData.protocolFeeRate.toNumber();
-    console.log("🚀 ~ protocolFeeRate:", protocolFeeRate);
     const fundFeeRate = configData.fundFeeRate.toNumber();
-    console.log("🚀 ~ fundFeeRate:", fundFeeRate);
 
     if (address0 === poolState.token0Mint.toBase58()) {
       // Swap token0 to token1

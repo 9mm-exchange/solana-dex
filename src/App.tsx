@@ -6,17 +6,13 @@ import { TransactionNotifications } from './components/notifications/Transaction
 import { ThemeProvider } from './context/ThemeContext';
 import { TransactionProvider } from './context/TransactionContext';
 import { WalletContextProvider } from './context/WalletContext';
+import Admin from './pages/Admin';
 import CreateLP from './pages/CreateLP';
-import CreateLPNew from './pages/CreateLPNew';
 import Deposit from './pages/Deposit';
-import DepositNew from './pages/DepositNew';
 import Home from './pages/Home';
 import LPPositions from './pages/LPPositions';
-import LPPositionsNew from './pages/LPPositionsNew';
 import Swap from './pages/Swap';
-import SwapNew from './pages/SwapNew';
 import Withdraw from './pages/Withdraw';
-import WithdrawLPNew from './pages/WithdrawNew';
 
 function App() {
   return (
@@ -28,15 +24,11 @@ function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="/swap" element={<Swap />} />
-              <Route path="/swap-new" element={<SwapNew />} />
               <Route path="/deposit" element={<Deposit />} />
-              <Route path="/deposit-new" element={<DepositNew />} />
               <Route path="/withdraw" element={<Withdraw />} />
-              <Route path="/withdraw-new" element={<WithdrawLPNew />} />
               <Route path="/lp-positions" element={<LPPositions />} />
-              <Route path="/lp-positions-new" element={<LPPositionsNew />} />
               <Route path="/create-lp" element={<CreateLP />} />
-              <Route path="/create-lp-new" element={<CreateLPNew />} />
+              <Route path="/admin" element={<Admin />} />
             </Route>
           </Routes>
         </Router>

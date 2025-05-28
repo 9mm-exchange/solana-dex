@@ -49,10 +49,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
             <div className="font-bold text-green-500">{position.earned}</div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit-new?pool=${position.poolAddress}`)}>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit?pool=${position.poolAddress}`)}>
               Deposit 
             </Button>
-            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw-new?pool=${position.poolAddress}`)}>
+            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw?pool=${position.poolAddress}`)}>
               Withdraw
             </Button>
           </div>

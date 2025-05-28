@@ -114,7 +114,7 @@ const PoolTableNew = () => {
                 {pool.apr}%
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <Button size="sm" onClick={() => navigate(`/deposit-new?pool=${pool.poolAddress}`)}>
+                <Button size="sm" onClick={() => navigate(`/deposit?pool=${pool.poolAddress}`)}>
                   Deposit Liquidity
                 </Button>
               </td>

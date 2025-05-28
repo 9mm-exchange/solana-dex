@@ -3,6 +3,7 @@ import { userInfo } from '../types';
 
 // Ensure there is a protocol included
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
+export const ADMIN_WALLET = import.meta.env.VITE_ADMIN_WALLET || "";
 
 const headers: Record<string, string> = {
     "ngrok-skip-browser-warning": "true",
