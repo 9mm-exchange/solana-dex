@@ -56,9 +56,10 @@ router.get("/list", async (req: any, res: any) => {
 router.get("/list-with-wallet/:walletAddress", async (req: any, res: any) => {
   try {
     const { walletAddress } = req.params;
+    console.log("🚀 ~ router.get ~ walletAddress:", walletAddress)
     
     // Get all pools
-    const pools = await Pool.find({}).sort({ createdAt: -1 });
+    const pools = await Pool.find({creator: walletAddress});
     
     // Get all unique token addresses
     const tokenAddresses = new Set<string>();

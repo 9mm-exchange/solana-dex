@@ -280,64 +280,6 @@ router.get("/wallet/:wallet", async (req, res) => {
   }
 });
 
-router.post("/addToken", async (req, res) => {
-  try {
-    const { token, wallet } = req.body;
-    console.log("🚀 ~ addToken:", token);
-    console.log("🚀 ~ addToken:", wallet)
-
-    // Validate token data
-    if (!token || !token.address || !token.symbol || !token.name || !wallet) {
-      return res.status(400).json({ error: "Invalid token data" });
-    }
-
-    // Check if token already exists
-    const existingToken = await Token.findOne({
-      mint: token.address,
-      addedBy: wallet
-    });
-    console.log("🚀 ~ router.post ~ existingToken:", existingToken)
-    if (existingToken) {
-      return res.status(400).json({ error: "Token already exists in the list" });
-    }
-
-    // Create new token
-    const newToken = new Token({
-      mint: token.address,
-      symbol: token.symbol,
-      name: token.name,
-      logoURI: token.img || "https://swap.pump.fun/tokens/usde.webp",
-      decimals: token.decimals || 9,
-      addedBy: wallet,
-      createdAt: new Date()
-    });
-
-    await newToken.save();
-    return res.status(200).json({ message: "Token added successfully", token: newToken });
-  } catch (error) {
-    console.error("Error adding token:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.post("/getCustomList", async (req, res) => {
-  console.log("getCustomList");
-  try {
-    const { wallet } = req.body;
-    console.log("🚀 ~ router.get ~ wallet:", wallet)
-
-    if (!wallet) {
-      return res.status(400).json({ error: "Wallet address is required" });
-    }
-
-    const tokens = await Token.find({ addedBy: wallet });
-    res.status(200).json(tokens);
-  } catch (error) {
-    console.error("Error fetching user tokens:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 export default router;
 
 export interface UserInfo {
