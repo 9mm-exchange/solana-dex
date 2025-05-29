@@ -15,7 +15,7 @@ import SettingModal from "../components/modals/SettingModal";
 import SwapDetailsNew from "../components/SwapDetailsNew";
 import Button from "../components/ui/Button";
 import Card, { CardBody, CardFooter } from "../components/ui/Card";
-import { errorAlert } from "../components/ui/ToastGroup";
+// import { errorAlert } from "../components/ui/ToastGroup";
 import WalletButton from "../components/ui/WalletButton";
 import { useTransactionNotifications } from "../context/TransactionContext";
 import UserContext from "../context/UserContext";
@@ -34,6 +34,7 @@ const Swap: React.FC = () => {
   const wallet = useWallet();
   const { isLoading, setIsLoading } = useContext(UserContext);
   const [slippageModal, setSlippageModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const [sellTokenData, setSellTokenData] = useState<TokenData | null>(null);
   const [buyTokenData, setBuyTokenData] = useState<TokenData | null>(null);
@@ -99,7 +100,7 @@ const Swap: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching balances:", error);
-      errorAlert("Failed to fetch token balances!");
+      setErrorMessage("Failed to fetch token balances!");
     }
   };
 
@@ -111,7 +112,7 @@ const Swap: React.FC = () => {
         setPoolList(poolData);
       } catch (error) {
         console.error("Error fetching pools:", error);
-        errorAlert("Failed to fetch pool list!");
+        setErrorMessage("Failed to fetch pool list!");
       }
     };
 
@@ -160,6 +161,7 @@ const Swap: React.FC = () => {
           console.log("Pool found:", pool.toBase58());
           setPoolAddr(pool);
           setSwapAvailable(true);
+          setErrorMessage("");
         } else {
           console.log("sellTokenData", sellTokenData);
           console.log("buyTokenData", buyTokenData);
@@ -169,7 +171,7 @@ const Swap: React.FC = () => {
         }
       } catch (error) {
         console.error("Error fetching pool address:", error);
-        errorAlert("Failed to fetch pool information!");
+        setErrorMessage("Failed to fetch pool information!");
         setPoolAddr(null);
       }
     };
@@ -220,7 +222,7 @@ const Swap: React.FC = () => {
       }
     } catch (error) {
       console.error("Error calculating output amount:", error);
-      errorAlert("Failed to calculate output amount!");
+      setErrorMessage("Failed to calculate output amount!");
       setBuyAmount(0);
     } finally {
       setIsCalculating(false);
@@ -239,7 +241,7 @@ const Swap: React.FC = () => {
 
   const handleSwap = async (amount: number) => {
     if (!sellTokenData || !sellTokenData.address || !poolAddr) {
-      errorAlert("Missing token data or pool address");
+      setErrorMessage("Missing token data or pool address");
       return;
     }
     setIsLoading(true);
@@ -488,6 +490,17 @@ const Swap: React.FC = () => {
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">
               1 {sellTokenData.symbol} = {buyAmount / sellAmount}{" "}
               {buyTokenData.symbol}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md flex items-start gap-2">
+              <AlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={16} />
+              <div>
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                  {errorMessage}
+                </p>
+              </div>
             </div>
           )}
 

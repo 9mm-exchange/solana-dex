@@ -502,9 +502,9 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
 
   let decimals: number;
   if (direction == 0) {
-    decimals = token0Decimals;
-  } else {
     decimals = token1Decimals;
+  } else {
+    decimals = token0Decimals;
   }
 
   const inputVault = poolState.token0Vault;
@@ -540,8 +540,38 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
 
   let tx = new Transaction();
   try {
-    if (direction == 0) {
-      tx = await program.methods
+    const inputAtaInfo = await connection.getAccountInfo(inputTokenAcc);
+    const outputAtaInfo = await connection.getAccountInfo(outputTokenAcc);
+
+    // Create ATA creation instructions only if they don't exist
+    if (!inputAtaInfo) {
+      const createInputAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, // payer
+        inputTokenAcc, // ata
+        wallet.publicKey, // owner
+        poolState.token0Mint, // mint
+        poolState.token0Program,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      tx.add(createInputAtaIx);
+    }
+
+    if (!outputAtaInfo) {
+      const createOutputAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, // payer
+        outputTokenAcc, // ata
+        wallet.publicKey, // owner
+        poolState.token1Mint, // mint
+        poolState.token1Program,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      tx.add(createOutputAtaIx);
+    }
+
+    let swapIx: TransactionInstruction;
+
+    if (direction == 1) {
+      swapIx = await program.methods
         .swapBaseInput(new BN(amount * Math.pow(10, decimals)), new BN(0))
         .accounts({
           ammConfig: configAddr,
@@ -557,9 +587,9 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
           poolState: poolAddress,
           payer: wallet.publicKey
         })
-        .transaction();
+        .instruction();
     } else {
-      tx = await program.methods
+      swapIx = await program.methods
         .swapBaseInput(new BN(amount * Math.pow(10, decimals)), new BN(0))
         .accounts({
           ammConfig: configAddr,
@@ -575,8 +605,10 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
           poolState: poolAddress,
           payer: wallet.publicKey
         })
-        .transaction();
+        .instruction();
     }
+
+    tx.add(swapIx);
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
