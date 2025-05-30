@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import axios from 'axios';
 import { ADMIN_WALLET, BACKEND_URL } from '../utils/util';
-import { errorAlert, successAlert } from '../components/ui/ToastGroup';
 import { TokenData } from '../types';
 import { getMetadata, getMetaData2022 } from '../program/web3';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { checkTokenStandard } from '../program/utils';
 import { useNavigate } from 'react-router-dom';
+import { useTransactionNotifications } from '../context/TransactionContext';
 
 const Admin: React.FC = () => {
   const { publicKey, connected } = useWallet();
@@ -18,12 +18,12 @@ const Admin: React.FC = () => {
   const [newTokenName, setNewTokenName] = useState('');
   const [newTokenSymbol, setNewTokenSymbol] = useState('');
   const [newTokenLogo, setNewTokenLogo] = useState('');
-
+  const { showNotification } = useTransactionNotifications();
   // Check admin access
   useEffect(() => {
     if (connected && publicKey) {
       if (publicKey.toString() !== ADMIN_WALLET) {
-        errorAlert('Access denied. Admin wallet required.');
+        showNotification(null, 'Access denied. Admin wallet required.');
         navigate('/');
       } else {
         fetchTokens();
@@ -41,19 +41,19 @@ const Admin: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching tokens:', error);
-      errorAlert('Failed to fetch tokens');
+      showNotification(null, 'Failed to fetch tokens');
     }
   };
 
   // Handle adding new token
   const handleAddToken = async () => {
     if (!publicKey || publicKey.toString() !== ADMIN_WALLET) {
-      errorAlert('Access denied. Admin wallet required.');
+      showNotification(null, 'Access denied. Admin wallet required.');
       return;
     }
 
     if (!newTokenAddress) {
-      errorAlert('Please enter token address');
+      showNotification(null, 'Please enter token address');
       return;
     }
 
@@ -84,7 +84,7 @@ const Admin: React.FC = () => {
       });
 
       if (response.data.message === 'Token added successfully') {
-        successAlert('Token added successfully');
+        showNotification(null, 'Token added successfully');
         setNewTokenAddress('');
         setNewTokenName('');
         setNewTokenSymbol('');
@@ -92,7 +92,7 @@ const Admin: React.FC = () => {
         fetchTokens();
       }
     } catch (error: any) {
-      errorAlert(error.response?.data?.error || 'Failed to add token');
+      showNotification(null, error.response?.data?.error || 'Failed to add token');
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +101,7 @@ const Admin: React.FC = () => {
   // Handle removing token
   const handleRemoveToken = async (tokenAddress: string) => {
     if (!publicKey || publicKey.toString() !== ADMIN_WALLET) {
-      errorAlert('Access denied. Admin wallet required.');
+      showNotification(null, 'Access denied. Admin wallet required.');
       return;
     }
 
@@ -112,10 +112,10 @@ const Admin: React.FC = () => {
           wallet: 'ADMIN'
         }
       });
-      successAlert('Token removed successfully');
+      showNotification(null, 'Token removed successfully');
       fetchTokens();
     } catch (error: any) {
-      errorAlert(error.response?.data?.error || 'Failed to remove token');
+      showNotification(null, error.response?.data?.error || 'Failed to remove token');
     }
   };
 

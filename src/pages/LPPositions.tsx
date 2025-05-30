@@ -1,6 +1,6 @@
 // components/LPPositions.tsx
 import { Plus, TrendingUp } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EducationalSection from '../components/EducationalSection';
 import EmptyState from '../components/EmptyState';
@@ -13,8 +13,11 @@ import { getPoolListWithWallet } from '../utils/getPoolList';
 import { PoolData, TokenData } from '../types';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import UserContext from '../context/UserContext';
+import { Spinner } from '../components/Spinner';
 
 const LPPositions: React.FC = () => {
+  const { isLoading, setIsLoading } = useContext(UserContext);
   const wallet = useWallet();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'top' | 'my'>('top');
@@ -25,12 +28,16 @@ const LPPositions: React.FC = () => {
   // Fetch pools on component mount
   useEffect(() => {
     const fetchPools = async () => {
+      setIsLoading(true);
       try {
         const poolList = await getPoolListWithWallet(wallet.publicKey as PublicKey);
-        console.log("🚀 ~ fetchPools ~ poolList:", poolList);
+        console.log("🚀 ~ fetchPools ~ poolList:", poolList)
         setPools(poolList);
       } catch (error) {
         console.error("Error fetching pools:", error);
+        setIsLoading(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -60,9 +67,10 @@ const LPPositions: React.FC = () => {
 
   return (
     <div>
+      {isLoading && <Spinner />}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">LP Positions</h1>
-        <Button onClick={() => navigate('/create-lp-new')}>
+        <Button onClick={() => navigate('/create-lp-new')} disabled={isLoading}>
           <Plus size={16} className="mr-1" /> Create New LP
         </Button>
       </div>
@@ -184,7 +192,7 @@ const LPPositions: React.FC = () => {
                       liquidity: pool.liquidity,
                       apr: parseFloat(averageAPR),
                       value: pool.liquidity,
-                      earned: pool.vol
+                      earned: pool.userEarned
                     }} 
                   />
                 );

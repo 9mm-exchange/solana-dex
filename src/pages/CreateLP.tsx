@@ -80,7 +80,6 @@ const CreateLP: React.FC = () => {
     const fetchPools = async () => {
       try {
         const poolList = await getPoolList();
-        console.log("🚀 ~ fetchPools ~ poolList:", poolList);
         setPools(poolList);
       } catch (error) {
         console.error("Error fetching pools:", error);
@@ -117,8 +116,6 @@ const CreateLP: React.FC = () => {
             baseTokenData.address
           );
 
-          console.log("🚀 ~ useEffect ~ poolAddr:", poolAddr.toBase58());
-
           // Ensure pools is an array of objects and compare using the address
           const checkExistPool = pools.filter(
             (pool) => pool.address === poolAddr.toBase58()
@@ -138,13 +135,11 @@ const CreateLP: React.FC = () => {
             );
             if (checkExistPool.length > 0) {
               setCheckPoolExist(true);
-              console.log("🚀 ~ useEffect ~ poolAddr:", poolAddr.toBase58());
               setExistPoolAddress(poolAddr.toBase58());
             } else {
               setCheckPoolExist(false);
             }
           }
-          console.log("check pool: ", checkPoolExist);
         } catch (error) {
           console.error("Error retrieving pool address:", error);
         }
@@ -288,7 +283,6 @@ const CreateLP: React.FC = () => {
         )) as CreatePoolResponse;
       }
 
-      console.log("🚀 ~ handleCreatepool ~ res:", res);
       if (res && typeof res === 'object' && 'res' in res && res.res instanceof WalletSignTransactionError) {
         showNotification('error', 'Transaction was not signed. Please try again.');
         return;
@@ -320,7 +314,6 @@ const CreateLP: React.FC = () => {
 
   const handleNavigateToDeposit = useCallback(() => {
     if (quoteTokenData && baseTokenData) {
-      console.log("🚀 ~ handleNavigateToDeposit ~ existPoolAddress:", existPoolAddress);
       navigate(`/deposit?pool=${existPoolAddress}`);
     }
   }, [quoteTokenData, baseTokenData, navigate, existPoolAddress]);
@@ -540,8 +533,9 @@ const CreateLP: React.FC = () => {
                 onClick={() => {
                   if (!checkPoolExist) handleCreatepool();
                 }}
+                disabled={checkPoolExist || isLoading}
               >
-                {checkPoolExist ? "Already exist pool" : "Create pool"}
+                {checkPoolExist ? "Already exist pool" : isLoading ? "Creating pool..." : "Create pool"}
               </Button>
             )}
           </div>

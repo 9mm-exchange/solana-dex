@@ -1,18 +1,21 @@
 // components/PositionCard.tsx
+import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PositionCardProps } from '../types';
 import Button from './ui/Button';
 import Card, { CardBody, CardFooter } from './ui/Card';
+import UserContext from '../context/UserContext';
 
 const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   const navigate = useNavigate();
+  const { isLoading } = useContext(UserContext);
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardBody>
         <div className="flex items-start justify-between">
           <div className="flex items-center">
-            <div className="relative">
+            <div className={`relative ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
               <img 
                 src={position.token0.img} 
                 alt={position.token0.symbol} 
@@ -49,10 +52,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
             <div className="font-bold text-green-500">{position.earned}</div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit?pool=${position.poolAddress}`)}>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit?pool=${position.poolAddress}`)} disabled={isLoading}>
               Deposit 
             </Button>
-            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw?pool=${position.poolAddress}`)}>
+            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw?pool=${position.poolAddress}`)} disabled={isLoading}>
               Withdraw
             </Button>
           </div>

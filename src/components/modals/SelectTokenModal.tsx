@@ -5,11 +5,10 @@ import { getMetadata, getMetaData2022 } from '../../program/web3';
 import { useWallet } from '@solana/wallet-adapter-react';
 import axios from 'axios';
 import { ChevronRight, Search, X } from 'lucide-react';
-import { TokenList } from '../../../config';
 import UserContext from '../../context/UserContext';
 import { TokenData } from '../../types';
 import { BACKEND_URL } from '../../utils/util';
-import { errorAlert, successAlert } from '../ui/ToastGroup';
+import { useTransactionNotifications } from '../../context/TransactionContext';
 
 interface SelectTokenModalProps {
   selectState: any;
@@ -24,14 +23,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
   const [newTokenSymbol, setNewTokenSymbol] = useState('');
   const [newTokenName, setNewTokenName] = useState('');
   const [isMetadataFetched, setIsMetadataFetched] = useState(false);
-  // const [defaultTokens] = useState<TokenData[]>(TokenList.map(token => ({
-  //   id: token.id,
-  //   text: token.text,
-  //   img: token.img,
-  //   address: token.address,
-  //   name: token.text,
-  //   symbol: token.id
-  // })));
+  const { showNotification } = useTransactionNotifications();
   const [defaultTokens, setDefaultTokens] = useState<TokenData[]>([]);
   const [customTokens, setCustomTokens] = useState<TokenData[]>([]);
   const menuDropdown = useRef<HTMLDivElement | null>(null);
@@ -151,7 +143,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
 
   const handleAddToken = async () => {
     if (!publicKey) {
-      errorAlert("Wallet not connected");
+      showNotification(null, 'Wallet not connected');
       return;
     }
 
@@ -161,7 +153,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
     const metadata = await fetchTokenMetadata(searchQuery);
 
     if (!metadata) {
-      errorAlert("Failed to fetch token metadata");
+      showNotification(null, 'Failed to fetch token metadata');
       return;
     }
 
@@ -183,7 +175,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
 
       if (response.data.message === "Token added successfully") {
         setIsLoading(false);
-        successAlert("Token added successfully!");
+        showNotification(null,'Token added successfully!');
 
         const tokensResponse = await axios.post(`${BACKEND_URL}/user/getCustomList`, {
           wallet: publicKey.toString()
@@ -207,12 +199,12 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
         setIsMetadataFetched(false);
       } else {
         setIsLoading(false)
-        errorAlert(response.data.error || "Failed to add token");
+        showNotification(null, response.data.error || "Failed to add token");
       }
     } catch (error: any) {
       setIsLoading(false)
       console.error("Error adding token:", error);
-      errorAlert(error.response?.data?.error || "Failed to add token. Please try again.");
+      showNotification(null, error.response?.data?.error || "Failed to add token. Please try again.");
     }
   };
 

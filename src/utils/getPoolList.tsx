@@ -43,6 +43,7 @@ export const getPoolListWithWallet = async (walletAddress: PublicKey): Promise<P
   try {
     const response = await axios.get(`${BACKEND_URL}/pool/list-with-wallet/${walletAddress.toString()}`);
     
+    console.log("🚀 ~ getPoolListWithWal ~ response:", response)
     if (response.data && Array.isArray(response.data)) {
       // Get user's LP token balances for each pool
       const poolsWithBalances = await Promise.all(response.data.map(async (pool: any) => {
@@ -85,7 +86,7 @@ export const getPoolListWithWallet = async (walletAddress: PublicKey): Promise<P
           } : null,
           userLiquidity: userLpBalance,
           userShare: userLpBalance,
-          userEarned: '0' // This would need to be calculated based on fees earned
+          userEarned: (pool.userEarned / Math.pow(10, 9)).toString() || '0'
         };
       }));
 

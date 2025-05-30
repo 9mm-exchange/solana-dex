@@ -8,13 +8,14 @@ import { FC, useContext, useEffect } from "react";
 import UserContext from "../../context/UserContext";
 import { userInfo } from "../../types";
 import { confirmWallet, walletConnect } from "../../utils/util";
-import { errorAlert, successAlert } from "./ToastGroup";
+import { useTransactionNotifications } from "../../context/TransactionContext";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 const WalletButton: FC = () => {
   const { user, setUser, login, setLogin, isLoading, setIsLoading } = useContext(UserContext);
   const { connected, publicKey, disconnect, signMessage, wallet } = useWallet();
+  const { showNotification } = useTransactionNotifications();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +43,7 @@ const WalletButton: FC = () => {
         if (loginRes?.status === 200 && loginRes?.data?.token) {
           setUser(loginRes.data);
           setLogin(true);
-          successAlert("Login successful.");
+          showNotification(null,'Login successful.');
           setIsLoading(false);
           return;
         }
@@ -50,7 +51,7 @@ const WalletButton: FC = () => {
         // Only proceed to registration if user not found
         if (err?.response?.status !== 404) {
           console.error("Login error:", err);
-          errorAlert(err?.response?.data?.message || "Login failed.");
+          showNotification(null, err?.response?.data?.message || "Login failed.");
           setIsLoading(false);
           return;
         }
@@ -60,7 +61,7 @@ const WalletButton: FC = () => {
       const connection = await walletConnect({ data: updatedUser });
   
       if (!connection || !connection.nonce) {
-        errorAlert("Failed to get nonce from server.");
+        showNotification(null, "Failed to get nonce from server.");
         setIsLoading(false);
         return;
       }
@@ -87,17 +88,17 @@ const WalletButton: FC = () => {
         if (confirm) {
           setUser(confirm);
           setLogin(true);
-          successAlert("Wallet connected successfully.");
+          showNotification(null, "Wallet connected successfully.");
         } else {
-          errorAlert("Wallet confirmation failed.");
+          showNotification(null, "Wallet confirmation failed.");
         }
       } catch (error) {
         console.error("Signing error:", error);
-        errorAlert("Failed to sign message. Please try again.");
+        showNotification(null, "Failed to sign message. Please try again.");
       }
     } catch (error) {
       console.error("Wallet connection error:", error);
-      errorAlert("Failed to connect wallet. Please try again.");
+      showNotification(null, "Failed to connect wallet. Please try again.");
     } finally {
       setIsLoading(false);
     }

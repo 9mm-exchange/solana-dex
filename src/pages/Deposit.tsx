@@ -71,7 +71,6 @@ const Deposit: React.FC = () => {
     const fetchPools = async () => {
       try {
         const poolList = await getPoolList();
-        console.log("🚀 ~ fetchPools ~ poolList:", poolList);
         setPools(poolList);
 
         // Check URL for pool parameter and select the pool if it exists
@@ -113,7 +112,6 @@ const Deposit: React.FC = () => {
         quoteTokenData.address,
         baseTokenData.address
       );
-      console.log("🚀 ~ calculateLpAmount ~ lpMint:", lpMint?.toBase58())
       // const lpDecimal = await getTokenDecimals(lpMint.toBase58());
       const lpDecimal = lpMint
         ? await getTokenDecimals(lpMint.toBase58())
@@ -397,7 +395,6 @@ const Deposit: React.FC = () => {
           new PublicKey(poolAddress)
         );
       }
-      console.log("🚀 ~ handleDeposite ~ result:", result);
       if (result instanceof WalletSignTransactionError) {
         showNotification('error', 'Transaction was not signed. Please try again.');
         return;
@@ -518,6 +515,7 @@ const Deposit: React.FC = () => {
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"
                   pattern="^[0-9]*[.,]?[0-9]*$"
+                  disabled={!quoteTokenData}
                 />
 
                 <div className="flex items-center gap-2 ml-2">
@@ -594,6 +592,7 @@ const Deposit: React.FC = () => {
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"
                   pattern="^[0-9]*[.,]?[0-9]*$"
+                  disabled={!baseTokenData}
                 />
 
                 <div className="flex items-center gap-2 ml-2">
@@ -699,14 +698,14 @@ const Deposit: React.FC = () => {
               <div>~0.0005 SOL</div>
             </div>
 
-            {baseAmount === 0 && quoteAmount === 0 ? (
+            {!quoteTokenData?.address || !baseTokenData?.address ? (
               <Button
                 fullWidth
                 size="lg"
                 className="w-full flex justify-center items-center py-4 rounded-xl text-white bg-gray-800 hover:bg-gray-700 transition-colors"
                 disabled
               >
-                Enter amounts
+                Select Pool
               </Button>
             ) : (
               <Button
@@ -730,7 +729,7 @@ const Deposit: React.FC = () => {
                     baseAmount
                   )
                 }
-                disabled={isCalculating || exceedsToken0Balance || exceedsToken1Balance}
+                disabled={isCalculating || exceedsToken0Balance || exceedsToken1Balance || isLoading || !quoteTokenData?.address || !baseTokenData?.address || baseAmount === 0 || quoteAmount === 0}
               >
                 {isCalculating ? (
                   <div className="flex items-center gap-2">
@@ -739,6 +738,12 @@ const Deposit: React.FC = () => {
                   </div>
                 ) : exceedsToken0Balance || exceedsToken1Balance ? (
                   "Insufficient Balance"
+                ) : isLoading ? (
+                  "Adding Liquidity..."
+                ) : !quoteTokenData?.address || !baseTokenData?.address ? (
+                  "Select Tokens"
+                ) : baseAmount === 0 && quoteAmount === 0 ? (
+                  "Enter amounts"
                 ) : (
                   "Add Liquidity"
                 )}

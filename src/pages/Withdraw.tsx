@@ -20,6 +20,9 @@ import { RaydiumCpSwap } from "../program/raydium_cp_swap";
 import raydiumCpSwapIdl from "../program/raydium_cp_swap.json";
 import { Transaction, VersionedTransaction } from "@solana/web3.js";
 import { calculateTokenAmounts } from "../utils/calculateTokenAmounts";
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { fetchPositions, updatePositionLiquidity } from '../store/slices/positionSlice';
 
 type WalletCompatible = {
   publicKey: anchor.web3.PublicKey;
@@ -44,6 +47,8 @@ function convertWallet(wallet: WalletContextState): WalletCompatible {
 
 const Withdraw: React.FC = () => {
   const wallet = useWallet();
+  const dispatch = useDispatch<AppDispatch>();
+  const { positions, loading: positionsLoading } = useSelector((state: RootState) => state.positions);
   const { isLoading, setIsLoading } = useContext(UserContext);
   const [token0Data, settoken0Data] = useState<TokenData | null>(null);
   const [token1Data, setToken1Data] = useState<TokenData | null>(null);
@@ -58,7 +63,6 @@ const Withdraw: React.FC = () => {
   const [quoteBalance, setQuoteBalance] = useState<number>(0);
   const [baseBalance, setBaseBalance] = useState<number>(0);
   const [lpBalance, setLpBalance] = useState<number>(0);
-  const [positions, setPositions] = useState<PositionData[]>([]);
   const [checkPosition, setCheckPosition] = useState<boolean>(true);
   const { showNotification } = useTransactionNotifications();
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -69,7 +73,6 @@ const Withdraw: React.FC = () => {
         wallet.publicKey.toBase58(),
         token0Data.address
       );
-      console.log("Sell balance: ", sellBal);
       setQuoteBalance(sellBal);
     }
     if (wallet.publicKey && token1Data) {
@@ -77,13 +80,9 @@ const Withdraw: React.FC = () => {
         wallet.publicKey.toBase58(),
         token1Data.address
       );
-      console.log("Buy balance: ", buyBal);
       setBaseBalance(buyBal);
     }
     if (wallet.publicKey && token1Data && token0Data) {
-      console.log("🚀 ~ fetchBalance ~ token0Data:", token0Data);
-      console.log("🚀 ~ fetchBalance ~ token1Data:", token1Data);
-      console.log("------------------------");
       const lpMint = await getLpMint(
         wallet,
         token0Data.address,
@@ -94,7 +93,6 @@ const Withdraw: React.FC = () => {
           wallet.publicKey.toBase58(),
           lpMint.toString()
         );
-        console.log("lp balance: ", lpBal);
         setLpBalance(lpBal);
         const newLp: TokenData = {
           address: lpMint.toString(),
@@ -104,50 +102,20 @@ const Withdraw: React.FC = () => {
           name: "LP Token",
           symbol: "LP"
         };
-        console.log("🚀 ~ fetchBalance ~ newLp:", newLp);
         setLpTokenData(newLp);
       }
     }
   };
 
   useEffect(() => {
+    if (wallet.publicKey) {
+      dispatch(fetchPositions(wallet));
+    }
+  }, [wallet.publicKey, dispatch]);
+
+  useEffect(() => {
     fetchBalance();
   }, [wallet.publicKey, token0Data, token1Data, selectedPosition]);
-
-  // Fetch pools on component mount
-  useEffect(() => {
-    const fetchPositions = async () => {
-      try {
-        const positionList = await getPoolList();
-        console.log("🚀 ~ fetchPositions ~ positionList:", positionList);
-        // Transform the position list to match the PositionData interface
-        const transformedPositions = positionList.map(pool => ({
-          ...pool,
-          token0: pool.token0 || undefined,
-          token1: pool.token1 || undefined,
-          vol: pool.vol || '0',
-          liquidity: pool.liquidity || '0',
-          address: pool.address,
-          lpMint: pool.lpMint
-        }));
-        setPositions(transformedPositions);
-
-        // Check URL for pool parameter and select the position if it exists
-        const urlParams = new URLSearchParams(window.location.search);
-        const poolAddress = urlParams.get('pool');
-        if (poolAddress) {
-          const positionFromUrl = transformedPositions.find(position => position.address === poolAddress);
-          if (positionFromUrl) {
-            handlePositionSelect(positionFromUrl);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching positions:", error);
-      }
-    };
-
-    fetchPositions();
-  }, []);
 
   useEffect(() => {
     if (!selectedPosition) return;
@@ -182,12 +150,9 @@ const Withdraw: React.FC = () => {
 
   useEffect(() => {
     if (lpTokenData) {
-      console.log("🚀 ~ useEffect ~ lpTokenData:", lpTokenData);
-      console.log("🚀 ~ useEffect ~ pools:", positions);
       const lpTokenExist = positions.find(
         (position) => position.lpMint === lpTokenData.address
       );
-      console.log("🚀 ~ useEffect ~ lpTokenExist:", lpTokenExist);
       if (lpTokenExist !== undefined) {
         setCheckPosition(false);
       }
@@ -316,18 +281,10 @@ const Withdraw: React.FC = () => {
       return;
     }
 
-    console.log(
-      "handlewithdraw: ",
-      address1,
-      address2,
-      lpAmount
-    );
     setIsLoading(true);
     try {
       const quoteDecimal = await getTokenDecimals(address1);
-      console.log("🚀 ~ handleCreatepool ~ quoteDecimal:", quoteDecimal);
       const baseDecimal = await getTokenDecimals(address2);
-      console.log("🚀 ~ handleCreatepool ~ baseDecimal:", baseDecimal);
       const lpMint = await getLpMint(wallet, address1, address2);
       const lpDecimal = lpMint ? await getTokenDecimals(lpMint.toBase58()) : null;
 
@@ -344,7 +301,6 @@ const Withdraw: React.FC = () => {
         0,
         lpAmount * Math.pow(10, lpDecimal)
       );
-      console.log("🚀 ~ handleWithdraw ~ res:", res);
 
       if (res instanceof WalletSignTransactionError) {
         showNotification('error', 'Transaction was not signed. Please try again.');
@@ -357,8 +313,15 @@ const Withdraw: React.FC = () => {
         setQuoteAmount(0);
         setBaseAmount(0);
         setlpTokenAmount(0);
-        // Refresh balances
-        await fetchBalance();
+        
+        // Update LP balance in Redux store
+        if (lpMint) {
+          const newLpBalance = await getTokenBalance(wallet.publicKey.toBase58(), lpMint.toString());
+          dispatch(updatePositionLiquidity({ lpMint, newLiquidity: newLpBalance }));
+        }
+        
+        // Refresh balances and positions
+        await Promise.all([fetchBalance(), dispatch(fetchPositions(wallet))]);
       } else {
         showNotification('error', 'Transaction failed', 'Please try again');
       }
@@ -448,6 +411,7 @@ const Withdraw: React.FC = () => {
                       <button
                         onClick={() => {
                           setlpTokenAmount(lpBalance);
+                          calculateTokenAmountsForLp(lpBalance);
                         }}
                         className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-purple-600 dark:text-purple-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                       >
@@ -549,7 +513,7 @@ const Withdraw: React.FC = () => {
                             <span>
                               1 {token0Data.id} ={" "}
                               {(
-                                quoteBalance! / baseBalance!
+                                baseBalance! / quoteBalance!
                               ).toFixed(6)}{" "}
                               {token1Data.id}
                             </span>
@@ -561,7 +525,7 @@ const Withdraw: React.FC = () => {
                             <span>
                               1 {token1Data.id} ={" "}
                               {(
-                                baseBalance! / quoteBalance!
+                                quoteBalance! / baseBalance!
                               ).toFixed(6)}{" "}
                               {token0Data.id}
                             </span>
@@ -606,6 +570,7 @@ const Withdraw: React.FC = () => {
               <Button
                 fullWidth
                 size="lg"
+                disabled={isLoading}
                 onClick={() => {
                   if (
                     token0Data?.address &&
@@ -622,7 +587,7 @@ const Withdraw: React.FC = () => {
                   }
                 }}
               >
-                Remove Liquidity
+                {isLoading ? "Processing..." : "Remove Liquidity"}
               </Button>
             )}
             <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">

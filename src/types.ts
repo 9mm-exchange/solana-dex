@@ -1,6 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export interface PoolData {
+  userEarned: string;
   vol: string;
   liquidity: string;
   address: string;

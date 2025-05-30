@@ -15,7 +15,6 @@ import SettingModal from "../components/modals/SettingModal";
 import SwapDetailsNew from "../components/SwapDetailsNew";
 import Button from "../components/ui/Button";
 import Card, { CardBody, CardFooter } from "../components/ui/Card";
-// import { errorAlert } from "../components/ui/ToastGroup";
 import WalletButton from "../components/ui/WalletButton";
 import { useTransactionNotifications } from "../context/TransactionContext";
 import UserContext from "../context/UserContext";
@@ -254,16 +253,14 @@ const Swap: React.FC = () => {
         amount,
         direction
       );
-        console.log("🚀 ~ handleSwap ~ txHash:", txHash)
         setIsLoading(false);
 
         if (txHash instanceof WalletSignTransactionError) {
           showNotification('error', 'Transaction was not signed. Please try again.');
           return;
         }
-
-        if (txHash && typeof txHash === 'string') {
-          showNotification('success', `Successfully swapped ${amount} ${sellTokenData.symbol} for ${buyTokenData?.symbol}`, txHash);
+        if (txHash && typeof txHash === 'object' && 'txid' in txHash) {
+          showNotification('success', `Successfully swapped ${amount} ${sellTokenData.symbol} for ${buyTokenData?.symbol}`, String(txHash.txid));
           fetchBalance();
         } else {
           showNotification('error', 'Transaction failed, The swap transaction was not completed successfully');
@@ -548,7 +545,7 @@ const Swap: React.FC = () => {
             <Button
               fullWidth
               size="lg"
-              className={`${sellBalance === 0 || isCalculating
+              className={`${sellBalance === 0 || isCalculating || isLoading
                   ? "bg-gray-800 cursor-not-allowed"
                   : "bg-[#87EFAC] hover:bg-[#6EE79D]"
                 } `}
@@ -557,7 +554,7 @@ const Swap: React.FC = () => {
                   ? undefined
                   : () => handleSwap(sellAmount)
               }
-              disabled={sellBalance === 0 || isCalculating}
+              disabled={sellBalance === 0 || isCalculating || isLoading}
             >
               {isCalculating ? (
                 <div className="flex items-center gap-2">
@@ -566,6 +563,8 @@ const Swap: React.FC = () => {
                 </div>
               ) : sellBalance === 0 ? (
                 "No Tokens on Wallet"
+              ) : isLoading ? (
+                "Swapping..."
               ) : (
                 "Swap"
               )}
