@@ -1,5 +1,5 @@
 // components/PositionCard.tsx
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PositionCardProps } from '../types';
 import Button from './ui/Button';
@@ -9,22 +9,31 @@ import UserContext from '../context/UserContext';
 const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   const navigate = useNavigate();
   const { isLoading } = useContext(UserContext);
+  useEffect(() => {
+    console.log("🚀 ~ isLoading:", isLoading)
+  }, [isLoading])
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardBody>
         <div className="flex items-start justify-between">
           <div className="flex items-center">
-            <div className={`relative ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="relative">
               <img 
                 src={position.token0.img} 
                 alt={position.token0.symbol} 
                 className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800" 
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/32'; // Fallback image
+                }}
               />
               <img 
                 src={position.token1.img} 
                 alt={position.token1.symbol} 
                 className="absolute -bottom-0 -right-4 w-8 h-8 rounded-full border-2 border-white dark:border-gray-800" 
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/32'; // Fallback image
+                }}
               />
             </div>
             <div className="ml-4">
@@ -52,10 +61,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
             <div className="font-bold text-green-500">{position.earned}</div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit?pool=${position.poolAddress}`)} disabled={isLoading}>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/deposit?pool=${position.poolAddress}`)}>
               Deposit 
             </Button>
-            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw?pool=${position.poolAddress}`)} disabled={isLoading}>
+            <Button size="sm" variant="danger" onClick={() => navigate(`/withdraw?pool=${position.poolAddress}`)}>
               Withdraw
             </Button>
           </div>

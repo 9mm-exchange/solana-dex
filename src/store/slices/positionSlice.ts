@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { PositionData } from '../../types';
-import { getPoolList } from '../../utils/getPoolList';
+import { getPoolListWithWallet } from '../../utils/getPoolList';
 import { getTokenBalance } from '../../program/web3';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 
 interface PositionState {
   positions: PositionData[];
@@ -20,7 +21,11 @@ export const fetchPositions = createAsyncThunk(
   'positions/fetchPositions',
   async (wallet: ReturnType<typeof useWallet>, { rejectWithValue }) => {
     try {
-      const positionList = await getPoolList();
+      if (!wallet.publicKey) {
+        return [];
+      }
+      const positionList = await getPoolListWithWallet(wallet.publicKey as PublicKey);
+      console.log("🚀 ~ positionList:", positionList)
       const transformedPositions = await Promise.all(positionList.map(async pool => {
         let token0Amount = '0';
         let token1Amount = '0';
@@ -49,7 +54,8 @@ export const fetchPositions = createAsyncThunk(
           vol: pool.vol || '0',
           liquidity: lpAmount,
           address: pool.address,
-          lpMint: pool.lpMint
+          lpMint: pool.lpMint,
+          userEarned: pool.userEarned
         };
       }));
 

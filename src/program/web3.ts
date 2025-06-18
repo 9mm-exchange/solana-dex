@@ -12,6 +12,7 @@ import {
   Transaction,
   TransactionInstruction,
   VersionedTransaction,
+  LAMPORTS_PER_SOL
 } from "@solana/web3.js";
 import { BN } from "bn.js";
 import { errorAlert } from "../components/ui/ToastGroup";
@@ -312,7 +313,7 @@ export const deposit = async (
     const vault1 = poolState.token1Vault;
 
     const depositIx = await program.methods
-      .deposit(new BN(lpAmount), new BN(quoteAmount), new BN(baseAmount))
+      .deposit(new BN(lpAmount), new BN(1000000000000000), new BN(1000000000000000))
       .accounts({
         owner: wallet.publicKey,
         poolState: poolAddress,
@@ -465,8 +466,11 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
   }
 }
 
-export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, amount: number, direction: number) => {
+export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, amount1: number, amount2: number, direction: number) => {
   console.log("🚀 ~ swap ~ poolAddress:", poolAddress)
+  console.log("amount1: ", amount1)
+  console.log("amount2: ", amount2)
+
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
   anchor.setProvider(provider);
@@ -500,18 +504,31 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
   const token0Decimals = await getTokenDecimals(poolState.token0Mint.toBase58());
   const token1Decimals = await getTokenDecimals(poolState.token1Mint.toBase58());
 
+  
+  const inputVault = poolState.token0Vault;
+  const vault0Amount = await connection.getTokenAccountBalance(inputVault);
+  console.log("🚀 ~ swap ~ vault0Amount:", vault0Amount.value.uiAmount)
+  console.log("inputVault: ", inputVault.toBase58());
+  
+  const outputVault = poolState.token1Vault;
+  const vault1Amount = await connection.getTokenAccountBalance(outputVault);
+  console.log("🚀 ~ swap ~ vault1Amount:", vault1Amount.value.uiAmount)
+  console.log("outputVault: ", outputVault);
+  
   let decimals: number;
   if (direction == 0) {
     decimals = token1Decimals;
+    if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault1Amount.value.uiAmount) {
+      console.log("amount exceed")
+      return "amount exceed"
+    }
   } else {
     decimals = token0Decimals;
+    if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault0Amount.value.uiAmount) {
+      console.log("amount exceed")
+      return "amount exceed"
+    }
   }
-
-  const inputVault = poolState.token0Vault;
-  console.log("inputVault: ", inputVault.toBase58());
-
-  const outputVault = poolState.token1Vault;
-  console.log("outputVault: ", outputVault);
 
   const inputTokenAcc = getAssociatedTokenAddressSync(
     poolState.token0Mint,
@@ -570,9 +587,9 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
 
     let swapIx: TransactionInstruction;
 
-    if (direction == 1) {
+    if (direction == 0) {
       swapIx = await program.methods
-        .swapBaseInput(new BN(amount * Math.pow(10, decimals)), new BN(0))
+        .swapBaseInput(new BN(amount1 * Math.pow(10, decimals)), new BN(0))
         .accounts({
           ammConfig: configAddr,
           inputTokenAccount: inputTokenAcc,
@@ -590,7 +607,7 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
         .instruction();
     } else {
       swapIx = await program.methods
-        .swapBaseInput(new BN(amount * Math.pow(10, decimals)), new BN(0))
+        .swapBaseInput(new BN(amount1 * Math.pow(10, decimals)), new BN(0))
         .accounts({
           ammConfig: configAddr,
           inputTokenAccount: outputTokenAcc,
@@ -618,11 +635,18 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
     return res;
   } catch (error) {
     console.log("Swap error")
-    errorAlert("");
+    // errorAlert("");
   }
 }
 
 export const getTokenBalance = async (wallet: string, mint_token: string) => {
+  // Handle native SOL
+  if (mint_token === 'So11111111111111111111111111111111111111112') {
+    const balance = await connection.getBalance(new PublicKey(wallet));
+    return balance / LAMPORTS_PER_SOL;
+  }
+
+  // Handle SPL tokens
   const token_account = await connection.getParsedTokenAccountsByOwner(
     new PublicKey(wallet),
     { programId: TOKEN_PROGRAM_ID },
@@ -638,17 +662,9 @@ export const getTokenBalance = async (wallet: string, mint_token: string) => {
   for (const account of token_accounts) {
     const parsedAccountInfo: any = account.account.data;
     if (parsedAccountInfo.parsed.info.mint === mint_token) {
-      // return {
-      //   uiAmount: parsedAccountInfo.parsed.info.tokenAmount.uiAmount,
-      //   amount: parsedAccountInfo.parsed.info.tokenAmount.amount,
-      // };
       return parsedAccountInfo.parsed.info.tokenAmount.uiAmount;
     }
   }
-  // return {
-  //   uiAmount: 0,
-  //   amount: 0,
-  // };
   return 0;
 }
 

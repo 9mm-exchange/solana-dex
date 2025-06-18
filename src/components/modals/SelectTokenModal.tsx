@@ -3,12 +3,13 @@ import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { checkTokenStandard } from '../../program/utils';
 import { getMetadata, getMetaData2022 } from '../../program/web3';
 import { useWallet } from '@solana/wallet-adapter-react';
-import axios from 'axios';
 import { ChevronRight, Search, X } from 'lucide-react';
 import UserContext from '../../context/UserContext';
 import { TokenData } from '../../types';
-import { BACKEND_URL } from '../../utils/util';
 import { useTransactionNotifications } from '../../context/TransactionContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store';
+import { fetchPlatformTokens, fetchCustomTokens, addCustomToken } from '../../store/slices/tokenSlice';
 
 interface SelectTokenModalProps {
   selectState: any;
@@ -17,18 +18,17 @@ interface SelectTokenModalProps {
 }
 
 const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSelect, onClose }) => {
-  const { isLoading, setIsLoading, slippageModal, setSlippageModal } = useContext(UserContext);
-  const { publicKey } = useWallet();
+  const { isLoading, setIsLoading } = useContext(UserContext);
+  const wallet = useWallet();
   const [searchQuery, setSearchQuery] = useState('');
   const [newTokenSymbol, setNewTokenSymbol] = useState('');
   const [newTokenName, setNewTokenName] = useState('');
   const [isMetadataFetched, setIsMetadataFetched] = useState(false);
   const { showNotification } = useTransactionNotifications();
-  const [defaultTokens, setDefaultTokens] = useState<TokenData[]>([]);
-  const [customTokens, setCustomTokens] = useState<TokenData[]>([]);
   const menuDropdown = useRef<HTMLDivElement | null>(null);
 
-  const hasFetched = useRef(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const { platformTokens, customTokens, loading, error } = useSelector((state: RootState) => state.tokens);
 
   // Helper function to fetch token metadata
   const fetchTokenMetadata = async (address: string) => {
@@ -51,69 +51,18 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
 
   // Fetch custom tokens on component mount
   useEffect(() => {
-    const fetchTokens = async () => {
-      if (!publicKey) {
-        setCustomTokens([]);
-        return;
-      }
-
-      try {
-        const customTokens = await axios.post(`${BACKEND_URL}/token/custom`, {
-          wallet: publicKey.toString()
-        });
-        console.log("Tokenlist customTokens", customTokens);
-
-        if (Array.isArray(customTokens.data)) {
-          const formattedTokens = customTokens.data.map((token: any) => ({
-            id: token.symbol || '',
-            text: token.name || '',
-            img: token.logoURI || 'https://swap.pump.fun/tokens/usde.webp',
-            address: token.mint || '',
-            name: token.name || '',
-            symbol: token.symbol || ''
-          }));
-          setCustomTokens(formattedTokens);
-        } else {
-          setCustomTokens([]);
-        }
-      } catch (error) {
-        console.error('Error fetching custom tokens:', error);
-        setDefaultTokens([]);
-      }
-    };
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchTokens();
+    if (wallet.publicKey) {
+      dispatch(fetchCustomTokens(wallet));
     }
-  }, [publicKey]);
+  }, [wallet, dispatch]);
 
+  // Fetch platform tokens on component mount
   useEffect(() => {
-    const fetchPlatformTokens = async () => {
-      const platformTokens = await axios.post(`${BACKEND_URL}/token/default`);
-      try {
-        console.log("Tokenlist platformTokens", platformTokens);
-        if (Array.isArray(platformTokens.data)) {
-          const formattedTokens = platformTokens.data.map((token: any) => ({
-            id: token.symbol || '',
-            text: token.name || '',
-            img: token.logoURI || 'https://swap.pump.fun/tokens/usde.webp',
-            address: token.mint || '',
-            name: token.name || '',
-            symbol: token.symbol || ''
-          }));
-          setDefaultTokens(formattedTokens);
-        } else {
-          setDefaultTokens([]);
-        }
-      } catch (error) {
-        console.error("Error fetching platform tokens:", error);
-      }
-    }
-    fetchPlatformTokens();
-  }, []);
+    dispatch(fetchPlatformTokens());
+  }, [dispatch]);
 
   // Enhanced search function
-  const filteredTokens = [...defaultTokens, ...customTokens].filter(token =>
+  const filteredTokens = [...platformTokens, ...customTokens].filter(token =>
     (token.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (token.symbol?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (token.address || '').includes(searchQuery)
@@ -142,7 +91,7 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
   }, [searchQuery]);
 
   const handleAddToken = async () => {
-    if (!publicKey) {
+    if (!wallet.publicKey) {
       showNotification(null, 'Wallet not connected');
       return;
     }
@@ -165,46 +114,23 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
       name: metadata.name || newTokenName || "",
       symbol: metadata.symbol || newTokenSymbol || ""
     };
-    console.log("🚀 ~ handleAddToken ~ newToken:", newToken)
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/token/add`, {
-        token: newToken,
-        wallet: publicKey.toString()
-      });
-
-      if (response.data.message === "Token added successfully") {
-        setIsLoading(false);
-        showNotification(null,'Token added successfully!');
-
-        const tokensResponse = await axios.post(`${BACKEND_URL}/user/getCustomList`, {
-          wallet: publicKey.toString()
-        });
-
-        if (Array.isArray(tokensResponse.data)) {
-          const formattedTokens = tokensResponse.data.map((token: any) => ({
-            id: token.symbol || '',
-            text: token.name || '',
-            img: token.logoURI || 'https://swap.pump.fun/tokens/usde.webp',
-            address: token.mint || '',
-            name: token.name || '',
-            symbol: token.symbol || ''
-          }));
-          setCustomTokens(formattedTokens);
-        }
-
+      const resultAction = await dispatch(addCustomToken({ token: newToken, wallet }));
+      if (addCustomToken.fulfilled.match(resultAction)) {
+        showNotification(null, 'Token added successfully!');
         setSearchQuery('');
         setNewTokenSymbol('');
         setNewTokenName('');
         setIsMetadataFetched(false);
       } else {
-        setIsLoading(false)
-        showNotification(null, response.data.error || "Failed to add token");
+        showNotification(null, resultAction.payload as string || "Failed to add token");
       }
     } catch (error: any) {
-      setIsLoading(false)
       console.error("Error adding token:", error);
-      showNotification(null, error.response?.data?.error || "Failed to add token. Please try again.");
+      showNotification(null, error.message || "Failed to add token. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -222,14 +148,14 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
   }, [menuDropdown]);
 
   const popularTokens = useMemo(() => {
-    const filteredTokens = defaultTokens.filter(token =>
+    const filteredTokens = platformTokens.filter(token =>
       ['USDe', 'TRX', 'APT', 'WLD'].includes(token.id)
     );
 
     const uniqueTokens = Array.from(new Map(filteredTokens.map(token => [token.id, token])).values());
 
     return uniqueTokens;
-  }, [defaultTokens]);
+  }, [platformTokens]);
 
   return (
     <>
@@ -273,7 +199,6 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
                     onClick={() => onSelect(token)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors`}
                   >
-
                     <img
                       src={token.img}
                       alt={token.symbol}
@@ -289,40 +214,39 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
           {/* Token List */}
           <div className="overflow-y-auto flex-grow -mx-2 px-2">
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
-
-              {filteredTokens.map((token, index) => (
-                <button
-                  key={index}
-                  onClick={() => onSelect(token)}
-                  className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
-                >
-                  <img
-                    src={token.img}
-                    alt={token.name}
-                    className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800"
-                  />
-                  <div className="text-left flex-grow">
-                    <div className="font-medium">{token.symbol}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{token.name}</div>
-                  </div>
-                  <div className="flex items-center">
-                    {/* {token.balance && ( */}
-                    <div className="text-right mr-3">
-                      {/* <div className="font-medium">1.45 */}
-                        {/* {token.balance} */}
-                      {/* </div> */}
-                      {/* {token.price && ( */}
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        $182.34
-                        {/* {(parseFloat(token.balance) * token.price).toFixed(2)} */}
-                      </div>
-                      {/* )} */}
+              {loading ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : error ? (
+                <div className="text-red-500 text-center py-4">{error}</div>
+              ) : (
+                filteredTokens.map((token, index) => (
+                  <button
+                    key={index}
+                    onClick={() => onSelect(token)}
+                    className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
+                  >
+                    <img
+                      src={token.img}
+                      alt={token.name}
+                      className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800"
+                    />
+                    <div className="text-left flex-grow">
+                      <div className="font-medium">{token.symbol}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{token.name}</div>
                     </div>
-                    {/* )} */}
-                    <ChevronRight size={16} className="text-gray-400" />
-                  </div>
-                </button>
-              ))}
+                    <div className="flex items-center">
+                      <div className="text-right mr-3">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          $182.34
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-400" />
+                    </div>
+                  </button>
+                ))
+              )}
 
               {searchQuery && filteredTokens.length < 3 && (
                 <div className='flex flex-col items-center justify-center p-2 gap-4'>
@@ -359,11 +283,9 @@ const SelectTokenModal: React.FC<SelectTokenModalProps> = ({ selectState, onSele
                 </div>
               )}
             </div>
-            {/* )} */}
           </div>
         </div>
       </div>
-
     </>
   );
 };

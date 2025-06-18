@@ -20,7 +20,7 @@ const ConnectWalletModal: React.FC<ConnectWalletModalProps> = ({ onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold">Connect Wallet</h3>
+          <h3 className="text-xl font-bold text-black">Connect Wallet</h3>
           <button
             onClick={onClose}
             className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

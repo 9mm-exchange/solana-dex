@@ -16,6 +16,9 @@ const Header: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [rpcEndpoint, setRpcEndpoint] = useState('https://api.mainnet-beta.solana.com');
   const [gasPriority, setGasPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [rpcType, setRpcType] = useState<'triton' | 'helius' | 'custom'>('triton');
+  const [version] = useState('1.0.0');
+  const [date] = useState(new Date().toLocaleDateString());
 
   const navItems = [
     { name: 'Swap', path: '/swap' },
@@ -28,6 +31,7 @@ const Header: React.FC = () => {
   const handleSaveSettings = () => {
     // Save settings logic here
     console.log('Settings saved:', { rpcEndpoint, gasPriority });
+    setRpcEndpoint(rpcEndpoint);
     setShowSettings(false);
   };
 
@@ -86,10 +90,14 @@ const Header: React.FC = () => {
         <SettingsModal
           rpcEndpoint={rpcEndpoint}
           gasPriority={gasPriority}
+          rpcType={rpcType}
+          onRpcTypeChange={setRpcType}
           onRpcChange={setRpcEndpoint}
           onGasPriorityChange={setGasPriority}
           onClose={() => setShowSettings(false)}
           onSave={handleSaveSettings}
+          version={version}
+          date={date}
         />
       )}
 

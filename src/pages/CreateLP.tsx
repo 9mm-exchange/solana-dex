@@ -3,7 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import React, { ChangeEvent, useCallback, useContext, useEffect, useState } from "react";
 import { createPool, getTokenBalance } from "../program/web3";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { WalletSignTransactionError } from "@solana/wallet-adapter-base";
 import { ChevronDown, Info, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -235,12 +235,14 @@ const CreateLP: React.FC = () => {
       const quoteDecimal = await getTokenDecimals(quoteTokenData.address);
       const baseDecimal = await getTokenDecimals(baseTokenData.address);
       const quoteStandard = await checkTokenStandard(quoteTokenData.address);
+      console.log("🚀 ~ handleCreatepool ~ quoteStandard:", quoteStandard?.toBase58())
       const baseStandard = await checkTokenStandard(baseTokenData.address);
+      console.log("🚀 ~ handleCreatepool ~ baseStandard:", baseStandard?.toBase58())
 
-      if (
+      if ((
         quoteStandard === TOKEN_2022_PROGRAM_ID &&
         baseStandard === TOKEN_2022_PROGRAM_ID
-      ) {
+      ) || (quoteStandard === TOKEN_PROGRAM_ID && baseStandard === TOKEN_PROGRAM_ID)) {
         setErrorMessage("One token should be a TOKEN-2022 token!");
         return;
       }

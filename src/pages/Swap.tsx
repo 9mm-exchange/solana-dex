@@ -20,7 +20,6 @@ import { useTransactionNotifications } from "../context/TransactionContext";
 import UserContext from "../context/UserContext";
 import {
   getPoolAddress,
-  getSwapOut,
   getTokenBalance,
   swap,
 } from "../program/web3";
@@ -28,21 +27,25 @@ import { PoolData, TokenData } from "../types";
 import { getPoolList } from "../utils/getPoolList";
 import { WalletSignTransactionError } from "@solana/wallet-adapter-base";
 import { calculateSwapAmounts } from "../program/web3";
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
+import { fetchPlatformTokens } from '../store/slices/tokenSlice';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const Swap: React.FC = () => {
   const wallet = useWallet();
   const { isLoading, setIsLoading } = useContext(UserContext);
   const [slippageModal, setSlippageModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [sellTokenData, setSellTokenData] = useState<TokenData | null>(null);
   const [buyTokenData, setBuyTokenData] = useState<TokenData | null>(null);
   const [sellAmount, setSellAmount] = useState<number>(0);
   const [buyAmount, setBuyAmount] = useState<number>(0);
   const [selectTokenModalState, setSelectTokenModalState] = useState(false);
-  const [selectTokenState, setSelectTokenState] = useState<"buy" | "sell">(
-    "sell"
-  );
+  const [selectTokenState, setSelectTokenState] = useState<"buy" | "sell">("sell");
   const [buyBalance, setBuyBalance] = useState<number>(0);
   const [sellBalance, setSellBalance] = useState<number>(0);
   const [direction, setDirection] = useState<number>(0);
@@ -51,19 +54,61 @@ const Swap: React.FC = () => {
   const [poolAddr, setPoolAddr] = useState<PublicKey | null>(null);
   const [poolList, setPoolList] = useState<PoolData[]>([]);
 
+  const dispatch = useDispatch<AppDispatch>();
+  const { platformTokens } = useSelector((state: RootState) => state.tokens);
+
   // Settings state
   const [slippage, setSlippage] = useState(0.5);
   const [transactionDeadline, setTransactionDeadline] = useState(20);
-  const [showSettings, setShowSettings] = useState(false);
-  const [slippagePreset, setSlippagePreset] = useState<"auto" | "custom">(
-    "auto"
-  );
+  const [slippagePreset, setSlippagePreset] = useState<"auto" | "custom">("auto");
   const [expertMode, setExpertMode] = useState(false);
 
   const { showNotification } = useTransactionNotifications();
-  // const hasFetched = useRef(false);
 
   const LP_FEE_PERCENT = 1; // 1% LP fee
+
+  // Fetch platform tokens on component mount
+  useEffect(() => {
+    dispatch(fetchPlatformTokens());
+  }, [dispatch]);
+
+  // Set default sell and buy tokens when platform tokens are loaded
+  useEffect(() => {
+    if (platformTokens.length === 0 || poolList.length === 0) return;
+
+    const poolAddress = searchParams.get('pooladdress');
+    if (poolAddress) {
+      const pool = poolList.find(p => p.address === poolAddress);
+      if (pool && pool.token0 && pool.token1) {
+        const sellToken = {
+          ...pool.token0,
+          id: pool.token0.symbol,
+          text: pool.token0.name,
+          img: pool.token0.image
+        };
+        const buyToken = {
+          ...pool.token1,
+          id: pool.token1.symbol,
+          text: pool.token1.name,
+          img: pool.token1.image
+        };
+        if (sellToken) setSellTokenData(sellToken);
+        if (buyToken) setBuyTokenData(buyToken);
+      }
+    } else {
+      // Set your default tokens (adjust indices as needed)
+      if (!sellTokenData && platformTokens[6]) setSellTokenData(platformTokens[6]);
+      if (!buyTokenData && platformTokens[7]) setBuyTokenData(platformTokens[7]);
+    }
+    // eslint-disable-next-line
+  }, [platformTokens, poolList, searchParams]);
+
+  // Fetch balances whenever sellTokenData or buyTokenData changes
+  useEffect(() => {
+    if (sellTokenData || buyTokenData) {
+      fetchBalance();
+    }
+  }, [sellTokenData, buyTokenData]);
 
   // Calculate derived values
   const lpFee = useMemo(() => {
@@ -99,7 +144,7 @@ const Swap: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching balances:", error);
-      setErrorMessage("Failed to fetch token balances!");
+      // setErrorMessage("Failed to fetch token balances!");
     }
   };
 
@@ -107,7 +152,6 @@ const Swap: React.FC = () => {
     const fetchPools = async () => {
       try {
         const poolData = await getPoolList();
-        console.log("🚀 ~ fetchPools ~ poolList:", poolData);
         setPoolList(poolData);
       } catch (error) {
         console.error("Error fetching pools:", error);
@@ -161,24 +205,29 @@ const Swap: React.FC = () => {
           setPoolAddr(pool);
           setSwapAvailable(true);
           setErrorMessage("");
+          // Update URL with pool address
+          setSearchParams({ pooladdress: pool.toBase58() });
         } else {
           console.log("sellTokenData", sellTokenData);
           console.log("buyTokenData", buyTokenData);
           console.warn("No matching pools found.");
           setPoolAddr(null);
           setSwapAvailable(false);
+          // Remove pool address from URL if no pool found
+          setSearchParams({});
         }
       } catch (error) {
         console.error("Error fetching pool address:", error);
-        setErrorMessage("Failed to fetch pool information!");
         setPoolAddr(null);
+        // Remove pool address from URL on error
+        setSearchParams({});
       }
     };
 
     fetchPool();
     setSellAmount(0);
     setBuyAmount(0);
-  }, [wallet.publicKey, sellTokenData, buyTokenData, poolList]);
+  }, [wallet.publicKey, sellTokenData, buyTokenData, poolList, setSearchParams]);
 
   useEffect(() => {
     setIsLoading(false);
@@ -239,6 +288,8 @@ const Swap: React.FC = () => {
   };
 
   const handleSwap = async (amount: number) => {
+    console.log("sell amount: ", sellAmount);
+    console.log("buy amount: ", buyAmount)
     if (!sellTokenData || !sellTokenData.address || !poolAddr) {
       setErrorMessage("Missing token data or pool address");
       return;
@@ -250,13 +301,20 @@ const Swap: React.FC = () => {
       const txHash = await swap(
         wallet,
         poolAddr,
-        amount,
+        // amount,
+        sellAmount,
+        buyAmount,
         direction
       );
+        console.log("🚀 ~ handleSwap ~ txHash:", txHash)
         setIsLoading(false);
 
         if (txHash instanceof WalletSignTransactionError) {
           showNotification('error', 'Transaction was not signed. Please try again.');
+          return;
+        }
+        if (txHash && typeof txHash === 'string' && txHash == "amount exceed") {
+          showNotification('error', 'Buy Amount exceed.')
           return;
         }
         if (txHash && typeof txHash === 'object' && 'txid' in txHash) {
@@ -312,6 +370,22 @@ const Swap: React.FC = () => {
     }
     setSelectTokenModalState(false);
   };
+
+  // Handle pool address from URL
+  useEffect(() => {
+    const poolAddress = searchParams.get('pooladdress');
+    if (poolAddress) {
+      try {
+        const pubKey = new PublicKey(poolAddress);
+        setPoolAddr(pubKey);
+        setSwapAvailable(true);
+        setErrorMessage("");
+      } catch (error) {
+        console.error("Invalid pool address in URL:", error);
+        setErrorMessage("Invalid pool address in URL");
+      }
+    }
+  }, [searchParams]);
 
   return (
     <div className="max-w-lg mx-auto">
@@ -485,7 +559,7 @@ const Swap: React.FC = () => {
 
           {sellTokenData && buyTokenData && (
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-              1 {sellTokenData.symbol} = {buyAmount / sellAmount}{" "}
+              1 {sellTokenData.symbol} = {isNaN(buyAmount / sellAmount) ? 0 : buyAmount / sellAmount}{" "}
               {buyTokenData.symbol}
             </div>
           )}

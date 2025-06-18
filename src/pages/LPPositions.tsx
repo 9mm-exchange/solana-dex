@@ -1,5 +1,5 @@
 // components/LPPositions.tsx
-import { Plus, TrendingUp } from 'lucide-react';
+import { Plus, TrendingUp, ArrowLeftRight } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EducationalSection from '../components/EducationalSection';
@@ -9,70 +9,61 @@ import PoolTableNew from '../components/PoolTableNew';
 import PositionCard from '../components/PositionCard';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { getPoolListWithWallet } from '../utils/getPoolList';
 import { PoolData, TokenData } from '../types';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
 import UserContext from '../context/UserContext';
 import { Spinner } from '../components/Spinner';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPositions } from '../store/slices/positionSlice';
+import { RootState, AppDispatch } from '../store';
 
 const LPPositions: React.FC = () => {
   const { isLoading, setIsLoading } = useContext(UserContext);
   const wallet = useWallet();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<'top' | 'my'>('top');
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month' | 'all'>('day');
-  const [pools, setPools] = useState<PoolData[]>([]);
+  
+  const { positions, loading: positionsLoading } = useSelector((state: RootState) => state.positions);
 
-
-  // Fetch pools on component mount
+  // Fetch positions on component mount
   useEffect(() => {
-    const fetchPools = async () => {
-      setIsLoading(true);
-      try {
-        const poolList = await getPoolListWithWallet(wallet.publicKey as PublicKey);
-        console.log("🚀 ~ fetchPools ~ poolList:", poolList)
-        setPools(poolList);
-      } catch (error) {
-        console.error("Error fetching pools:", error);
-        setIsLoading(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPools();
-  }, []);
+    if (wallet) {
+      dispatch(fetchPositions(wallet));
+    }
+  }, [dispatch, wallet]);
 
   // Calculate totals
-  const totalValue = pools.reduce((sum, pool) => {
-    const valueNumber = parseFloat(pool.liquidity.replace('$', '').replace(',', ''));
+  const totalValue = positions.reduce((sum, pool) => {
+    const valueNumber = parseFloat(pool.liquidity || '0');
     return sum + valueNumber;
   }, 0);
 
-  const totalEarned = pools.reduce((sum, pool) => {
-    const earnedNumber = parseFloat(pool.vol.replace('$', '').replace(',', ''));
+  const totalEarned = positions.reduce((sum, pool) => {
+    const earnedNumber = parseFloat(pool.vol || '0');
     return sum + earnedNumber;
   }, 0);
 
-  const averageAPR = pools.length > 0
-    ? (pools.reduce((sum, pool) => {
-        // Calculate APR based on volume and liquidity
-        const volume = parseFloat(pool.vol.replace('$', '').replace(',', ''));
-        const liquidity = parseFloat(pool.liquidity.replace('$', '').replace(',', ''));
+  const averageAPR = positions.length > 0
+    ? (positions.reduce((sum, pool) => {
+        const volume = parseFloat(pool.vol || '0');
+        const liquidity = parseFloat(pool.liquidity || '0');
         const apr = liquidity > 0 ? (volume / liquidity) * 100 : 0;
         return sum + apr;
-      }, 0) / pools.length).toFixed(2)
+      }, 0) / positions.length).toFixed(2)
     : '0.00';
 
   return (
     <div>
-      {isLoading && <Spinner />}
+      {(isLoading || positionsLoading) && <Spinner />}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">LP Positions</h1>
-        <Button onClick={() => navigate('/create-lp-new')} disabled={isLoading}>
-          <Plus size={16} className="mr-1" /> Create New LP
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/create-lp')} disabled={isLoading || positionsLoading}>
+            <Plus size={16} className="mr-1" /> Create New LP
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards - Only show for "My Positions" tab */}
@@ -147,56 +138,57 @@ const LPPositions: React.FC = () => {
           </Card>
         ) : (
           <>
-            {pools.length > 0 ? (
-              pools.map((pool, index) => {
-                console.log("🚀 ~ pools.map ~ pool:", pool)
-                const token0Data: TokenData = pool.token0 ? {
-                  id: pool.token0.symbol,
-                  text: pool.token0.name,
-                  img: pool.token0.image,
-                  address: pool.token0.address,
-                  name: pool.token0.name,
-                  symbol: pool.token0.symbol
-                } : {
-                  id: '',
-                  text: '',
-                  img: '',
-                  address: '',
-                  name: '',
-                  symbol: ''
-                };
+            {positions.length > 0 ? (
+              positions
+                .filter(pool => parseFloat(pool.liquidity || '0') > 0)
+                .map((pool, index) => {
+                  const token0Data: TokenData = pool.token0 ? {
+                    id: pool.token0.symbol,
+                    text: pool.token0.name,
+                    img: pool.token0.image,
+                    address: pool.token0.address,
+                    name: pool.token0.name,
+                    symbol: pool.token0.symbol
+                  } : {
+                    id: '',
+                    text: '',
+                    img: '',
+                    address: '',
+                    name: '',
+                    symbol: ''
+                  };
 
-                const token1Data: TokenData = pool.token1 ? {
-                  id: pool.token1.symbol,
-                  text: pool.token1.name,
-                  img: pool.token1.image,
-                  address: pool.token1.address,
-                  name: pool.token1.name,
-                  symbol: pool.token1.symbol
-                } : {
-                  id: '',
-                  text: '',
-                  img: '',
-                  address: '',
-                  name: '',
-                  symbol: ''
-                };
+                  const token1Data: TokenData = pool.token1 ? {
+                    id: pool.token1.symbol,
+                    text: pool.token1.name,
+                    img: pool.token1.image,
+                    address: pool.token1.address,
+                    name: pool.token1.name,
+                    symbol: pool.token1.symbol
+                  } : {
+                    id: '',
+                    text: '',
+                    img: '',
+                    address: '',
+                    name: '',
+                    symbol: ''
+                  };
 
-                return (
-                  <PositionCard 
-                    key={index} 
-                    position={{
-                      poolAddress: pool.address,
-                      token0: token0Data,
-                      token1: token1Data,
-                      liquidity: pool.liquidity,
-                      apr: parseFloat(averageAPR),
-                      value: pool.liquidity,
-                      earned: pool.userEarned
-                    }} 
-                  />
-                );
-              })
+                  return (
+                    <PositionCard 
+                      key={index} 
+                      position={{
+                        poolAddress: pool.address,
+                        token0: token0Data,
+                        token1: token1Data,
+                        liquidity: pool.liquidity,
+                        apr: parseFloat(averageAPR),
+                        value: pool.liquidity,
+                        earned: pool.userEarned
+                      }} 
+                    />
+                  );
+                })
             ) : (
               <EmptyState
                 title="No LP Positions Yet"
