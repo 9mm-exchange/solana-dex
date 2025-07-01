@@ -42,6 +42,8 @@ const Swap: React.FC = () => {
 
   const [sellTokenData, setSellTokenData] = useState<TokenData | null>(null);
   const [buyTokenData, setBuyTokenData] = useState<TokenData | null>(null);
+  const [sellAmountInput, setSellAmountInput] = useState<string>("");
+  const [buyAmountInput, setBuyAmountInput] = useState<string>("");
   const [sellAmount, setSellAmount] = useState<number>(0);
   const [buyAmount, setBuyAmount] = useState<number>(0);
   const [selectTokenModalState, setSelectTokenModalState] = useState(false);
@@ -279,11 +281,17 @@ const Swap: React.FC = () => {
 
   const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    const numericValue = Number(value);
-
-    if (!isNaN(numericValue) && numericValue >= 0) {
-      setSellAmount(numericValue);
-      await calculateOutputAmount(numericValue);
+    setSellAmountInput(value);
+    // Allow empty, ".", or valid decimal
+    if (/^(\d+)?(\.\d*)?$/.test(value) && value !== ".") {
+      const numericValue = parseFloat(value);
+      if (!isNaN(numericValue)) {
+        setSellAmount(numericValue);
+        await calculateOutputAmount(numericValue);
+      } else if (value === "") {
+        setSellAmount(0);
+        setBuyAmount(0);
+      }
     }
   };
 
@@ -387,6 +395,15 @@ const Swap: React.FC = () => {
     }
   }, [searchParams]);
 
+  // When you set buyAmount, also update buyAmountInput for display
+  useEffect(() => {
+    if (buyAmount === 0 && sellAmountInput === "") {
+      setBuyAmountInput("");
+    } else if (!isNaN(buyAmount)) {
+      setBuyAmountInput(buyAmount.toString());
+    }
+  }, [buyAmount]);
+
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-3xl font-bold mb-6">Swap Tokens</h1>
@@ -422,7 +439,7 @@ const Swap: React.FC = () => {
                   type="text"
                   id="sellAmount"
                   placeholder="0"
-                  value={sellAmount}
+                  value={sellAmountInput}
                   onChange={handleInputChange}
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"
@@ -512,7 +529,7 @@ const Swap: React.FC = () => {
                   type="text"
                   id="buyAmount"
                   placeholder="0"
-                  value={buyAmount}
+                  value={buyAmountInput}
                   onChange={handleInputChange}
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"

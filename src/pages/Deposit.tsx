@@ -144,7 +144,7 @@ const Deposit: React.FC = () => {
 
   const handleInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    const numericValue = Number(value);
+    const numericValue = parseFloat(value);
 
     // Validate input
     if (value !== "" && (isNaN(numericValue) || numericValue < 0)) {

@@ -32,6 +32,8 @@ const CreateLP: React.FC = () => {
   const { isLoading, setIsLoading } = useContext(UserContext);
   const [quoteTokenData, setQuoteTokenData] = useState<TokenData | null>(null);
   const [baseTokenData, setBaseTokenData] = useState<TokenData | null>(null);
+  const [quoteAmountInput, setQuoteAmountInput] = useState<string>("");
+  const [baseAmountInput, setBaseAmountInput] = useState<string>("");
   const [quoteAmount, setQuoteAmount] = useState<number>(0);
   const [baseAmount, setBaseAmount] = useState<number>(0);
   const [selectTokenModalState, setSelectTokenModalState] = useState(false);
@@ -151,28 +153,38 @@ const CreateLP: React.FC = () => {
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    const numericValue = Number(value);
-
-    if (!isNaN(numericValue) && numericValue >= 0) {
-      if (id === "quoteAmount") {
-        if (numericValue > quoteBalance) {
-          setErrorMessage(`Amount exceeds your ${quoteTokenData?.id} balance of ${quoteBalance}`);
-          setQuoteAmount(quoteBalance);
-        } else {
-          setQuoteAmount(numericValue);
-          setErrorMessage("");
-        }
-      } else if (id === "baseAmount") {
-        if (numericValue > baseBalance) {
-          setErrorMessage(`Amount exceeds your ${baseTokenData?.id} balance of ${baseBalance}`);
-          setBaseAmount(baseBalance);
-        } else {
-          setBaseAmount(numericValue);
-          setErrorMessage("");
+    if (id === "quoteAmount") {
+      setQuoteAmountInput(value);
+      if (/^(\d+)?(\.\d*)?$/.test(value) && value !== ".") {
+        const numericValue = parseFloat(value);
+        if (!isNaN(numericValue) && numericValue >= 0) {
+          if (numericValue > quoteBalance) {
+            setErrorMessage(`Amount exceeds your ${quoteTokenData?.id} balance of ${quoteBalance}`);
+            setQuoteAmount(quoteBalance);
+          } else {
+            setQuoteAmount(numericValue);
+            setErrorMessage("");
+          }
+        } else if (value === "") {
+          setQuoteAmount(0);
         }
       }
-    } else if (value !== "") {
-      setErrorMessage("Please enter a valid number");
+    } else if (id === "baseAmount") {
+      setBaseAmountInput(value);
+      if (/^(\d+)?(\.\d*)?$/.test(value) && value !== ".") {
+        const numericValue = parseFloat(value);
+        if (!isNaN(numericValue) && numericValue >= 0) {
+          if (numericValue > baseBalance) {
+            setErrorMessage(`Amount exceeds your ${baseTokenData?.id} balance of ${baseBalance}`);
+            setBaseAmount(baseBalance);
+          } else {
+            setBaseAmount(numericValue);
+            setErrorMessage("");
+          }
+        } else if (value === "") {
+          setBaseAmount(0);
+        }
+      }
     }
   };
 
@@ -362,7 +374,7 @@ const CreateLP: React.FC = () => {
                   type="text"
                   id="quoteAmount"
                   placeholder="0"
-                  value={quoteAmount}
+                  value={quoteAmountInput}
                   onChange={handleInputChange}
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"
@@ -435,7 +447,7 @@ const CreateLP: React.FC = () => {
                   type="text"
                   id="baseAmount"
                   placeholder="0"
-                  value={baseAmount}
+                  value={baseAmountInput}
                   onChange={handleInputChange}
                   className="flex-grow bg-transparent border-none outline-none text-xl font-medium text-gray-900 dark:text-white placeholder-gray-400 disabled:cursor-not-allowed min-w-0 w-[50%]"
                   inputMode="decimal"

@@ -366,6 +366,57 @@ export const deposit = async (
     const vault0 = poolState.token0Vault;
     const vault1 = poolState.token1Vault;
 
+    const tx = new Transaction();
+    // Add WSOL wrapping instructions if needed
+    if (vault0Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = creatorToken0;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(quoteAmount),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    }
+    if (vault1Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = creatorToken1;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(baseAmount),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    }
+
     const depositIx = await program.methods
       .deposit(new BN(lpAmount), new BN(1000000000000000), new BN(1000000000000000))
       .accounts({
@@ -382,7 +433,6 @@ export const deposit = async (
       })
       .instruction();
 
-    const tx = new Transaction();
     // Add create ATA instructions
     tx.add(createLpAtaIx);
     tx.add(createToken0AtaIx);
@@ -493,7 +543,43 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
   console.log("vault1: ", vault1.toBase58());
 
   try {
-    const tx = await program.methods
+    const tx = new Transaction();
+    // Add WSOL wrapping instructions if needed
+    if (poolState.token0Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = token0Acc;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      // No need to transfer lamports for withdraw, just ensure ATA exists
+    }
+    if (poolState.token1Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = token1Acc;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      // No need to transfer lamports for withdraw, just ensure ATA exists
+    }
+    const withdrawIx = await program.methods
       .withdraw(new BN(lpAmount), new BN(quoteAmount), new BN(baseAmount))
       .accounts({
         owner: wallet.publicKey,
@@ -507,11 +593,10 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
         vault0Mint: poolState.token0Mint,
         vault1Mint: poolState.token1Mint
       })
-      .transaction();
-
+      .instruction();
+    tx.add(withdrawIx);
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
-
     const res = await execTx(tx, connection, wallet);
     console.log("res: ", res);
     return res;
@@ -556,7 +641,9 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
   console.log("poolState: ", poolState);
 
   const token0Decimals = await getTokenDecimals(poolState.token0Mint.toBase58());
+  console.log("🚀 ~ swap ~ token0Decimals:", token0Decimals)
   const token1Decimals = await getTokenDecimals(poolState.token1Mint.toBase58());
+  console.log("🚀 ~ swap ~ token1Decimals:", token1Decimals)
 
   
   const inputVault = poolState.token0Vault;
@@ -568,16 +655,18 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
   const vault1Amount = await connection.getTokenAccountBalance(outputVault);
   console.log("🚀 ~ swap ~ vault1Amount:", vault1Amount.value.uiAmount)
   console.log("outputVault: ", outputVault);
+  console.log("amount1: ", amount1)
+  console.log("amount2: ", amount2)
   
   let decimals: number;
   if (direction == 0) {
-    decimals = token1Decimals;
+    decimals = token0Decimals;
     if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault1Amount.value.uiAmount) {
       console.log("amount exceed")
       return "amount exceed"
     }
   } else {
-    decimals = token0Decimals;
+    decimals = token1Decimals;
     if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault0Amount.value.uiAmount) {
       console.log("amount exceed")
       return "amount exceed"
@@ -640,6 +729,55 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
     }
 
     let swapIx: TransactionInstruction;
+
+    // Add WSOL wrapping instructions if needed
+    if (direction == 0 && poolState.token0Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = inputTokenAcc;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(amount1 * Math.pow(10, decimals)),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    } else if (direction == 1 && poolState.token1Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = inputTokenAcc;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(amount1 * Math.pow(10, decimals)),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    }
 
     if (direction == 0) {
       swapIx = await program.methods
