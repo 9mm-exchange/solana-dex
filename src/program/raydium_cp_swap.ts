@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/raydium_cp_swap.json`.
  */
 export type RaydiumCpSwap = {
-  "address": "8sX1gV38bzWoJhKEvjujCLvRR2Z16i5zcjZ779Lvce8Y",
+  "address": "7QKVA4wLPbsd1Jn4vDZYkZya1odREgaEBQ5of27GEsS6",
   "metadata": {
     "name": "raydiumCpSwap",
     "version": "0.1.1",
@@ -1662,11 +1662,11 @@ export type RaydiumCpSwap = {
         "kind": "struct",
         "fields": [
           {
-            "name": "creator",
+            "name": "poolId",
             "type": "pubkey"
           },
           {
-            "name": "poolId",
+            "name": "creator",
             "type": "pubkey"
           },
           {
@@ -1706,10 +1706,6 @@ export type RaydiumCpSwap = {
         "fields": [
           {
             "name": "poolId",
-            "type": "pubkey"
-          },
-          {
-            "name": "owner",
             "type": "pubkey"
           },
           {
@@ -2023,10 +2019,6 @@ export type RaydiumCpSwap = {
         "fields": [
           {
             "name": "poolId",
-            "type": "pubkey"
-          },
-          {
-            "name": "user",
             "type": "pubkey"
           },
           {
