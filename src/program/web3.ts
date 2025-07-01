@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { AMM_CONFIG_SEED, POOL_SEED, u16ToBytes } from "@raydium-io/raydium-sdk";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, getMint, getTokenMetadata, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, getMint, getTokenMetadata, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT } from "@solana/spl-token";
 import { ENV, TokenListProvider } from "@solana/spl-token-registry";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import {
@@ -12,7 +12,8 @@ import {
   Transaction,
   TransactionInstruction,
   VersionedTransaction,
-  LAMPORTS_PER_SOL
+  LAMPORTS_PER_SOL,
+  SystemProgram
 } from "@solana/web3.js";
 import { BN } from "bn.js";
 import { errorAlert } from "../components/ui/ToastGroup";
@@ -22,6 +23,7 @@ import { calculateDepositAmounts, calculateSwapResult, fromBigInt, toBigInt } fr
 import { AUTH_SEED, OBSERVATION_SEED, POOL_LP_MINT_SEED } from "./constant";
 import { execTx } from "./transaction";
 import { checkTokenStandard, getTokenDecimals } from "./utils";
+import { createSyncNativeInstruction } from "@solana/spl-token";
 
 
 const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
@@ -97,7 +99,6 @@ export const createPool = async (
   }
 
   try {
-
     const [configAddr] = await PublicKey.findProgramAddress(
       [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
       program.programId
@@ -139,7 +140,7 @@ export const createPool = async (
     )
     console.log("observationAddr: ", observationAddr.toBase58());
 
-    const creatorToken0 = getAssociatedTokenAddressSync(
+    let creatorToken0 = getAssociatedTokenAddressSync(
       quoteToken,
       wallet.publicKey,
       false,
@@ -147,7 +148,7 @@ export const createPool = async (
     )
     console.log("creatorToken0: ", creatorToken0.toBase58());
 
-    const creatorToken1 = getAssociatedTokenAddressSync(
+    let creatorToken1 = getAssociatedTokenAddressSync(
       baseToken,
       wallet.publicKey,
       false,
@@ -159,6 +160,58 @@ export const createPool = async (
     console.log('quoteAmount:', quoteAmount);
 
     const tx = new Transaction();
+
+    // Add WSOL wrapping instructions if needed
+    if (quoteToken.equals(NATIVE_MINT)) {
+      const wsolAccount = creatorToken0;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(quoteAmount),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    }
+    if (baseToken.equals(NATIVE_MINT)) {
+      const wsolAccount = creatorToken1;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            wsolAccount,
+            wallet.publicKey,
+            NATIVE_MINT,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        );
+      }
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: wsolAccount,
+          lamports: Math.floor(baseAmount),
+        }),
+        createSyncNativeInstruction(wsolAccount)
+      );
+    }
+
+    // Add pool creation instruction
     tx.add(await program.methods
       .initialize(new BN(quoteAmount), new BN(baseAmount), new BN(0))
       .accounts({
