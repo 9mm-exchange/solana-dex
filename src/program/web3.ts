@@ -84,7 +84,6 @@ export const createPool = async (
 ) => {
   console.log("quoteToken: ", quoteToken.toBase58());
   console.log("baseToken: ", baseToken.toBase58());
-  console.log("createpool: ", quoteToken.toBase58() < baseToken.toBase58());
 
   const anchorWallet = convertWallet(wallet);
   const provider = new anchor.AnchorProvider(connection, anchorWallet, { preflightCommitment: commitmentLevel });
@@ -176,6 +175,8 @@ export const createPool = async (
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+
+    console.log("simulate: ", await connection.simulateTransaction(tx));
 
     console.log("tx: ", tx);
     const res = await execTx(tx, connection, wallet);
@@ -1114,4 +1115,15 @@ export const calculateSwapAmounts = async (
       priceImpact: "0%"
     };
   }
+}
+
+export function comparePublicKeys(a: PublicKey, b: PublicKey): number {
+  const bytesA = a.toBytes();
+  const bytesB = b.toBytes();
+
+  for (let i = 0; i < 32; i++) {
+    if (bytesA[i] > bytesB[i]) return 1;
+    if (bytesA[i] < bytesB[i]) return -1;
+  }
+  return 0;
 }

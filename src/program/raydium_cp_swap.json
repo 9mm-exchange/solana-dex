@@ -1,5 +1,5 @@
 {
-  "address": "8sX1gV38bzWoJhKEvjujCLvRR2Z16i5zcjZ779Lvce8Y",
+  "address": "2eAWv4F3Q2JSMAmikVfJVMKBVM59mpr8BDc9vxNgypyT",
   "metadata": {
     "name": "raydium_cp_swap",
     "version": "0.1.1",
@@ -1656,10 +1656,6 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
             "name": "pool_id",
             "type": "pubkey"
           },
@@ -1700,10 +1696,6 @@
         "fields": [
           {
             "name": "pool_id",
-            "type": "pubkey"
-          },
-          {
-            "name": "owner",
             "type": "pubkey"
           },
           {
@@ -2017,10 +2009,6 @@
         "fields": [
           {
             "name": "pool_id",
-            "type": "pubkey"
-          },
-          {
-            "name": "user",
             "type": "pubkey"
           },
           {

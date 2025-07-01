@@ -2,8 +2,8 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import React, { ChangeEvent, useCallback, useContext, useEffect, useState } from "react";
-import { createPool, getTokenBalance } from "../program/web3";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { comparePublicKeys, createPool, getTokenBalance } from "../program/web3";
+import { NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { WalletSignTransactionError } from "@solana/wallet-adapter-base";
 import { ChevronDown, Info, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -233,11 +233,11 @@ const CreateLP: React.FC = () => {
     try {
       showNotification('processing', 'Sending transaction...');
       const quoteDecimal = await getTokenDecimals(quoteTokenData.address);
+      console.log("🚀 ~ handleCreatepool ~ quoteDecimal:", quoteDecimal)
       const baseDecimal = await getTokenDecimals(baseTokenData.address);
+      console.log("🚀 ~ handleCreatepool ~ baseDecimal:", baseDecimal)
       const quoteStandard = await checkTokenStandard(quoteTokenData.address);
-      console.log("🚀 ~ handleCreatepool ~ quoteStandard:", quoteStandard?.toBase58())
       const baseStandard = await checkTokenStandard(baseTokenData.address);
-      console.log("🚀 ~ handleCreatepool ~ baseStandard:", baseStandard?.toBase58())
 
       if ((
         quoteStandard === TOKEN_2022_PROGRAM_ID &&
@@ -261,7 +261,10 @@ const CreateLP: React.FC = () => {
       console.log("Quote token address:", quoteAddress.toBase58());
       console.log("Base token address:", baseAddress.toBase58());
 
-      if (quoteAddress.toBase58() < baseAddress.toBase58()) {
+      const compareRes = comparePublicKeys(quoteAddress, baseAddress);
+      console.log("🚀 ~ handleCreatepool ~ compareRes:", compareRes)
+
+      if (compareRes == -1) {
         // Original order is correct
         res = (await createPool(
           wallet,
@@ -284,8 +287,9 @@ const CreateLP: React.FC = () => {
           quoteStandard
         )) as CreatePoolResponse;
       }
+      console.log("🚀 ~ handleCreatepool ~ res:", res)
 
-      if (res && typeof res === 'object' && 'res' in res && res.res instanceof WalletSignTransactionError) {
+      if (res && typeof res === 'object' && 'res' in res && res.res as any instanceof WalletSignTransactionError) {
         showNotification('error', 'Transaction was not signed. Please try again.');
         return;
       }
