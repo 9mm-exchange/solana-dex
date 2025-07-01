@@ -45,6 +45,7 @@ pub struct SwapEvent {
 pub struct CreatePoolEvent {
     #[index]
     pub pool_id: Pubkey,
+    pub creator: Pubkey,
     pub token_0_mint: Pubkey,
     pub token_1_mint: Pubkey,
     pub token_0_amount: u64,

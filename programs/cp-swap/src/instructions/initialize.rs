@@ -317,6 +317,7 @@ pub fn initialize(
 
     emit!(CreatePoolEvent {
         pool_id: ctx.accounts.pool_state.key(),
+        creator: ctx.accounts.creator.key(),
         token_0_mint: ctx.accounts.token_0_mint.key(),
         token_1_mint: ctx.accounts.token_1_mint.key(),
         token_0_amount: token_0_vault.amount,

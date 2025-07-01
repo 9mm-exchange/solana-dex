@@ -172,7 +172,7 @@ function programCommand(name: string) {
     .option(
       "-c, --creator <string>",
       "Solana wallet Keypair Path",
-      "../key/creator.json"
+      "../key/uu.json"
     );
 }
 
