@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { AMM_CONFIG_SEED, POOL_SEED, u16ToBytes } from "@raydium-io/raydium-sdk";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, getMint, getTokenMetadata, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, getMint, getTokenMetadata, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT, getAssociatedTokenAddress, createCloseAccountInstruction } from "@solana/spl-token";
 import { ENV, TokenListProvider } from "@solana/spl-token-registry";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import {
@@ -13,7 +13,8 @@ import {
   TransactionInstruction,
   VersionedTransaction,
   LAMPORTS_PER_SOL,
-  SystemProgram
+  SystemProgram,
+  ComputeBudgetProgram
 } from "@solana/web3.js";
 import { BN } from "bn.js";
 import { errorAlert } from "../components/ui/ToastGroup";
@@ -76,12 +77,12 @@ export const raydiumCpSwapId = new PublicKey(raydiumCpSwapIdl.address);
 export const raydiumCpSwapProgramInterface = JSON.parse(JSON.stringify(raydiumCpSwapIdl));
 
 export const createPool = async (
-  wallet: WalletContextState, 
-  quoteToken: PublicKey, 
-  baseToken: PublicKey, 
-  quoteAmount: number, 
-  baseAmount: number, 
-  quoteProgram: PublicKey, 
+  wallet: WalletContextState,
+  quoteToken: PublicKey,
+  baseToken: PublicKey,
+  quoteAmount: number,
+  baseAmount: number,
+  quoteProgram: PublicKey,
   baseProgram: PublicKey
 ) => {
   console.log("quoteToken: ", quoteToken.toBase58());
@@ -301,11 +302,11 @@ export const deposit = async (
     // Get vault accounts to check their mints
     const vault0Info = await connection.getAccountInfo(poolState.token0Vault);
     const vault1Info = await connection.getAccountInfo(poolState.token1Vault);
-    
+
     if (!vault0Info || !vault1Info) {
       throw new Error("Failed to fetch vault account info");
     }
-    
+
     // Get the mint addresses from the vault accounts
     const vault0Mint = new PublicKey(vault0Info.data.slice(0, 32));
     const vault1Mint = new PublicKey(vault1Info.data.slice(0, 32));
@@ -368,8 +369,9 @@ export const deposit = async (
 
     const tx = new Transaction();
     // Add WSOL wrapping instructions if needed
+    let wsolAccount: PublicKey;
     if (vault0Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = creatorToken0;
+      wsolAccount = creatorToken0;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -393,7 +395,7 @@ export const deposit = async (
       );
     }
     if (vault1Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = creatorToken1;
+      wsolAccount = creatorToken1;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -433,11 +435,14 @@ export const deposit = async (
       })
       .instruction();
 
-    // Add create ATA instructions
     tx.add(createLpAtaIx);
     tx.add(createToken0AtaIx);
     tx.add(createToken1AtaIx);
     tx.add(depositIx);
+
+    if (vault0Mint.equals(NATIVE_MINT) || vault1Mint.equals(NATIVE_MINT)) {
+      tx.add(createCloseAccountInstruction(creatorToken0, wallet.publicKey, wallet.publicKey));
+    }
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
@@ -545,8 +550,9 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
   try {
     const tx = new Transaction();
     // Add WSOL wrapping instructions if needed
+    let wsolAccount: PublicKey;
     if (poolState.token0Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = token0Acc;
+      wsolAccount = token0Acc;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -563,7 +569,7 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
       // No need to transfer lamports for withdraw, just ensure ATA exists
     }
     if (poolState.token1Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = token1Acc;
+      wsolAccount = token1Acc;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -595,6 +601,9 @@ export const withdraw = async (wallet: WalletContextState, quoteToken: PublicKey
       })
       .instruction();
     tx.add(withdrawIx);
+    if (poolState.token0Mint.equals(NATIVE_MINT) || poolState.token1Mint.equals(NATIVE_MINT)) {
+      tx.add(createCloseAccountInstruction(token0Acc, wallet.publicKey, wallet.publicKey));
+    }
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
     const res = await execTx(tx, connection, wallet);
@@ -645,29 +654,30 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
   const token1Decimals = await getTokenDecimals(poolState.token1Mint.toBase58());
   console.log("🚀 ~ swap ~ token1Decimals:", token1Decimals)
 
-  
+
   const inputVault = poolState.token0Vault;
   const vault0Amount = await connection.getTokenAccountBalance(inputVault);
   console.log("🚀 ~ swap ~ vault0Amount:", vault0Amount.value.uiAmount)
   console.log("inputVault: ", inputVault.toBase58());
-  
+
   const outputVault = poolState.token1Vault;
   const vault1Amount = await connection.getTokenAccountBalance(outputVault);
   console.log("🚀 ~ swap ~ vault1Amount:", vault1Amount.value.uiAmount)
   console.log("outputVault: ", outputVault);
+  console.log("direction: ", direction)
   console.log("amount1: ", amount1)
   console.log("amount2: ", amount2)
-  
+
   let decimals: number;
   if (direction == 0) {
     decimals = token0Decimals;
-    if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault1Amount.value.uiAmount) {
+    if (vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault1Amount.value.uiAmount) {
       console.log("amount exceed")
       return "amount exceed"
     }
   } else {
     decimals = token1Decimals;
-    if(vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault0Amount.value.uiAmount) {
+    if (vault0Amount.value.uiAmount !== null && vault1Amount.value.uiAmount !== null && amount2 + 1 > vault0Amount.value.uiAmount) {
       console.log("amount exceed")
       return "amount exceed"
     }
@@ -731,8 +741,9 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
     let swapIx: TransactionInstruction;
 
     // Add WSOL wrapping instructions if needed
+    let wsolAccount: PublicKey;
     if (direction == 0 && poolState.token0Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = inputTokenAcc;
+      wsolAccount = inputTokenAcc;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -755,7 +766,7 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
         createSyncNativeInstruction(wsolAccount)
       );
     } else if (direction == 1 && poolState.token1Mint.equals(NATIVE_MINT)) {
-      const wsolAccount = inputTokenAcc;
+      wsolAccount = inputTokenAcc;
       const accountInfo = await connection.getAccountInfo(wsolAccount);
       if (!accountInfo) {
         tx.add(
@@ -818,6 +829,21 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
     }
 
     tx.add(swapIx);
+
+    console.log("poolState.token0Mint: ", poolState.token0Mint.toBase58())
+    console.log("poolState.token1Mint: ", poolState.token1Mint.toBase58())
+
+    if (poolState.token0Mint.equals(NATIVE_MINT) || poolState.token1Mint.equals(NATIVE_MINT)) {
+      const wsolAccount = inputTokenAcc;
+      const accountInfo = await connection.getAccountInfo(wsolAccount);
+      if (!accountInfo) {
+        tx.add(createCloseAccountInstruction(
+          wsolAccount,
+          wallet.publicKey,
+          wallet.publicKey,
+        ),)
+      }
+    }
 
     tx.feePayer = wallet.publicKey;
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
@@ -917,9 +943,9 @@ export const amountOut = async (
   anchor.setProvider(provider);
   // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
-      raydiumCpSwapIdl as RaydiumCpSwap,
-      provider
-    );
+    raydiumCpSwapIdl as RaydiumCpSwap,
+    provider
+  );
 
   const [configAddr, bump] = await PublicKey.findProgramAddress(
     [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
@@ -1024,9 +1050,9 @@ export async function getMetadata(mint: string) {
           params: [mint]
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (data.result?.content?.json_uri) {
         const jsonData = await fetch(data.result.content.json_uri);
         const jsonData2 = await jsonData.json();
@@ -1083,9 +1109,9 @@ export const getPoolAddress = async (
   anchor.setProvider(provider);
   // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
-      raydiumCpSwapIdl as RaydiumCpSwap,
-      provider
-    );
+    raydiumCpSwapIdl as RaydiumCpSwap,
+    provider
+  );
 
   const [configAddr, bump] = await PublicKey.findProgramAddress(
     [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
@@ -1111,9 +1137,9 @@ export const getOutAmount = async (
   anchor.setProvider(provider);
   // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
-      raydiumCpSwapIdl as RaydiumCpSwap,
-      provider
-    );
+    raydiumCpSwapIdl as RaydiumCpSwap,
+    provider
+  );
 
   const [configAddr, bump] = await PublicKey.findProgramAddress(
     [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
@@ -1146,7 +1172,7 @@ export const getOutAmount = async (
   );
   console.log("🚀 ~ result:", result)
   return result;
-  
+
 }
 
 export const getSwapOut = async (
@@ -1162,9 +1188,9 @@ export const getSwapOut = async (
   anchor.setProvider(provider);
   // const program = new Program(raydiumCpSwapProgramInterface as RaydiumCpSwap, provider);
   const program = new Program<RaydiumCpSwap>(
-      raydiumCpSwapIdl as RaydiumCpSwap,
-      provider
-    );
+    raydiumCpSwapIdl as RaydiumCpSwap,
+    provider
+  );
 
   const [configAddr, bump] = await PublicKey.findProgramAddress(
     [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
@@ -1219,18 +1245,18 @@ export const calculateSwapAmounts = async (
       [Buffer.from(AMM_CONFIG_SEED), u16ToBytes(0)],
       program.programId
     );
-    
+
     const poolState = await program.account.poolState.fetch(poolAddress);
     const configData = await program.account.ammConfig.fetch(configAddr);
-    
+
     // Get token decimals
     const token0Decimals = poolState.mint0Decimals;
     const token1Decimals = poolState.mint1Decimals;
-    
+
     // Get current pool balances
     const token0Info = await connection.getTokenAccountBalance(poolState.token0Vault);
     const token1Info = await connection.getTokenAccountBalance(poolState.token1Vault);
-    
+
     const token0Amount = BigInt(token0Info.value.amount);
     const token1Amount = BigInt(token1Info.value.amount);
 
@@ -1242,24 +1268,24 @@ export const calculateSwapAmounts = async (
     if (address0 === poolState.token0Mint.toBase58()) {
       // Swap token0 to token1
       const inputAmount = toBigInt(amount, token0Decimals);
-      
+
       // Calculate fees (in basis points, so divide by 10000)
       const tradeFee = (inputAmount * BigInt(tradeFeeRate)) / BigInt(10000);
       const protocolFee = (tradeFee * BigInt(protocolFeeRate)) / BigInt(10000);
       const fundFee = (tradeFee * BigInt(fundFeeRate)) / BigInt(10000);
-      
+
       // Calculate actual input amount after fees
       const actualAmountIn = inputAmount - tradeFee - protocolFee - fundFee;
-      
+
       // Calculate output using constant product formula: x * y = k
       const constantBefore = token0Amount * token1Amount;
       const newToken0Amount = token0Amount + actualAmountIn;
       const newToken1Amount = constantBefore / newToken0Amount;
       const outputAmount = token1Amount - newToken1Amount;
-      
+
       // Convert back to decimal
       const returnOut = fromBigInt(outputAmount, token1Decimals);
-      
+
       return {
         outputAmount: returnOut,
         tradeFee: fromBigInt(tradeFee, token0Decimals),
@@ -1270,24 +1296,24 @@ export const calculateSwapAmounts = async (
     } else {
       // Swap token1 to token0
       const inputAmount = toBigInt(amount, token1Decimals);
-      
+
       // Calculate fees
       const tradeFee = (inputAmount * BigInt(tradeFeeRate)) / BigInt(10000);
       const protocolFee = (tradeFee * BigInt(protocolFeeRate)) / BigInt(10000);
       const fundFee = (tradeFee * BigInt(fundFeeRate)) / BigInt(10000);
-      
+
       // Calculate actual input amount after fees
       const actualAmountIn = inputAmount - tradeFee - protocolFee - fundFee;
-      
+
       // Calculate output using constant product formula: x * y = k
       const constantBefore = token0Amount * token1Amount;
       const newToken1Amount = token1Amount + actualAmountIn;
       const newToken0Amount = constantBefore / newToken1Amount;
       const outputAmount = token0Amount - newToken0Amount;
-      
+
       // Convert back to decimal
       const returnOut = fromBigInt(outputAmount, token0Decimals);
-      
+
       return {
         outputAmount: returnOut,
         tradeFee: fromBigInt(tradeFee, token1Decimals),
