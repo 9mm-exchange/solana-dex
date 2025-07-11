@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/raydium_cp_swap.json`.
  */
 export type RaydiumCpSwap = {
-  "address": "7QKVA4wLPbsd1Jn4vDZYkZya1odREgaEBQ5of27GEsS6",
+  "address": "2MQv8ZMy5wfT6UPbuBBipvRFCuCxnydeB8YzMXqFU5iS",
   "metadata": {
     "name": "raydiumCpSwap",
     "version": "0.1.1",
@@ -1709,6 +1709,10 @@ export type RaydiumCpSwap = {
             "type": "pubkey"
           },
           {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
             "name": "lpAmountBefore",
             "type": "u64"
           },
@@ -2022,10 +2026,14 @@ export type RaydiumCpSwap = {
             "type": "pubkey"
           },
           {
-            "name": "inputVaultBefore",
+            "name": "user",
             "docs": [
               "pool vault sub trade fees"
             ],
+            "type": "pubkey"
+          },
+          {
+            "name": "inputVaultBefore",
             "type": "u64"
           },
           {

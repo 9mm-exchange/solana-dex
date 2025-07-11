@@ -215,7 +215,7 @@ const handleLpChangeEvent = async (event: any) => {
   try {
     const poolAddress = event.poolId.toString();
     console.log("🚀 ~ handleLpChangeEvent ~ poolAddress:", poolAddress);
-    const owner = event.owner.toString();
+    const owner = event.user.toString();
     console.log("🚀 ~ handleLpChangeEvent ~ owner:", owner);
     // const lpAmountIn = event.lpAmountIn.toNumber() / Math.pow(10, lpDecimal);
     // console.log("🚀 ~ handleLpChangeEvent ~ lpAmountIn:", lpAmountIn);

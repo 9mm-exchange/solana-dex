@@ -3,6 +3,7 @@ import Pool from "../models/Pool";
 import Token from "../models/Token";
 import { logger } from '../sockets/logger';
 import PoolStatus from "../models/PoolStatus";
+import LiquidityStatus from "../models/LiquidityStatus";
 
 const router = express.Router();
 
@@ -60,11 +61,11 @@ router.get("/list-with-wallet/:walletAddress", async (req: any, res: any) => {
     console.log("🚀 ~ router.get ~ walletAddress:", walletAddress);
     
     // Get all pools where the user has positions
-    const poolStatuses = await PoolStatus.find({ record: { $elemMatch: { holder: walletAddress } } });
+    const liquiditystatus = await LiquidityStatus.find({ record: { $elemMatch: { holder: walletAddress } } });
     
-    console.log("🚀 ~ router.get ~ poolStatuses:", poolStatuses)
+    console.log("🚀 ~ router.get ~ liquiditystatus:", liquiditystatus)
     // Get all unique pool IDs from the statuses
-    const poolIds = poolStatuses.map(status => status.poolId);
+    const poolIds = liquiditystatus.map(status => status.poolId);
     
     // Get all pools that match these IDs
     const pools = await Pool.find({ _id: { $in: poolIds } }).sort({ createdAt: -1 });
@@ -86,10 +87,10 @@ router.get("/list-with-wallet/:walletAddress", async (req: any, res: any) => {
       const token1 = tokenMap.get(pool.token1Mint);
       
       // Find the corresponding pool status for this pool
-      const poolStatus = poolStatuses.find(status => status.poolId.toString() === pool._id.toString());
+      const poolStatus = liquiditystatus.find(status => status.poolId.toString() === pool._id.toString());
       
       // Calculate total swap amount for this user in this pool
-      const totalSwapAmount = poolStatus?.record.reduce((sum, record) => sum + record.swapAmount, 0) || 0;
+      const totalSwapAmount = poolStatus?.record.reduce((sum, record) => sum + record.Amount, 0) || 0;
       console.log("🚀 ~ router.get ~ totalSwapAmount:", totalSwapAmount)
 
       return {
