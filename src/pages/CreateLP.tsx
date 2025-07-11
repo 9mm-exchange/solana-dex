@@ -189,11 +189,15 @@ const CreateLP: React.FC = () => {
   };
 
   const handleMaxQuote = () => {
+    console.log("handle max quote");
     setQuoteAmount(quoteBalance);
+    setQuoteAmountInput(quoteBalance.toString());
   };
 
   const handleMaxBase = () => {
+    console.log("handle max base")
     setBaseAmount(baseBalance);
+    setBaseAmountInput(baseBalance.toString());
   };
 
   const selectToken = () => {

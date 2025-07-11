@@ -26,6 +26,7 @@ export const fetchPositions = createAsyncThunk(
       }
       const positionList = await getPoolListWithWallet(wallet.publicKey as PublicKey);
       console.log("🚀 ~ positionList:", positionList)
+      console.log("-----------------------------")
       const transformedPositions = await Promise.all(positionList.map(async pool => {
         let token0Amount = '0';
         let token1Amount = '0';

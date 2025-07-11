@@ -32,6 +32,13 @@ import { AppDispatch, RootState } from '../store';
 import { fetchPlatformTokens } from '../store/slices/tokenSlice';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
+function formatNumber(num: number, decimals = 6) {
+  if (!isFinite(num)) return "0";
+  if (num === 0) return "0";
+  if (Math.abs(num) < 1e-6) return num.toFixed(8).replace(/\.?0+$/, "");
+  return num.toFixed(decimals).replace(/\.?0+$/, "");
+}
+
 const Swap: React.FC = () => {
   const wallet = useWallet();
   const { isLoading, setIsLoading } = useContext(UserContext);
@@ -345,7 +352,9 @@ const Swap: React.FC = () => {
   };
 
   const setMax = () => {
-    setSellAmount(sellBalance);
+    const solPrice = 150.5
+    setSellAmount(sellBalance * solPrice);
+    setSellAmountInput(sellBalance.toString());
   };
 
   if (sellAmount > sellBalance) {
@@ -400,7 +409,12 @@ const Swap: React.FC = () => {
     if (buyAmount === 0 && sellAmountInput === "") {
       setBuyAmountInput("");
     } else if (!isNaN(buyAmount)) {
-      setBuyAmountInput(buyAmount.toString());
+      // Format to 6 decimals, remove trailing zeros
+      setBuyAmountInput(
+        buyAmount < 0.000001 && buyAmount > 0
+          ? buyAmount.toFixed(8).replace(/\.?0+$/, "")
+          : buyAmount.toFixed(6).replace(/\.?0+$/, "")
+      );
     }
   }, [buyAmount]);
 
@@ -489,7 +503,7 @@ const Swap: React.FC = () => {
           </div>
 
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {sellAmount !== 0 ? `≈ $${sellAmount} USD` : ''}
+            {sellAmount !== 0 ? `≈ $${formatNumber(sellAmount)} USD` : ''}
           </div>
           {/* {exceedsToken0Balance && (
             <div className="mt-1 text-sm text-red-500 flex items-center gap-1">
@@ -571,13 +585,12 @@ const Swap: React.FC = () => {
           </div>
 
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {buyAmount !== 0 ? `≈ $${buyAmount} USD` : ''}
+            {buyAmount !== 0 ? `≈ $${formatNumber(buyAmount)} USD` : ''}
           </div>
 
           {sellTokenData && buyTokenData && (
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-              1 {sellTokenData.symbol} = {isNaN(buyAmount / sellAmount) ? 0 : buyAmount / sellAmount}{" "}
-              {buyTokenData.symbol}
+              1 {sellTokenData.symbol} = {isNaN(buyAmount / sellAmount) ? 0 : formatNumber(buyAmount / sellAmount, 8)} {buyTokenData.symbol}
             </div>
           )}
 

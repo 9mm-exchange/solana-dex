@@ -858,6 +858,7 @@ export const swap = async (wallet: WalletContextState, poolAddress: PublicKey, a
 }
 
 export const getTokenBalance = async (wallet: string, mint_token: string) => {
+  console.log("mint_token: ", mint_token)
   // Handle native SOL
   if (mint_token === 'So11111111111111111111111111111111111111112') {
     const balance = await connection.getBalance(new PublicKey(wallet));

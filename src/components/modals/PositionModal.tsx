@@ -9,7 +9,6 @@ interface PositionModalProps {
 }
 
 const PositionModal: React.FC<PositionModalProps> = ({ positions, onSelect, onClose }) => {
-  console.log("🚀 ~ positions:", positions)
   const menuDropdown = useRef<HTMLDivElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPositions, setFilteredPools] = useState(positions);

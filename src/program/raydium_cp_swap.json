@@ -1,5 +1,5 @@
 {
-  "address": "7QKVA4wLPbsd1Jn4vDZYkZya1odREgaEBQ5of27GEsS6",
+  "address": "2MQv8ZMy5wfT6UPbuBBipvRFCuCxnydeB8YzMXqFU5iS",
   "metadata": {
     "name": "raydium_cp_swap",
     "version": "0.1.1",
@@ -1703,6 +1703,10 @@
             "type": "pubkey"
           },
           {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
             "name": "lp_amount_before",
             "type": "u64"
           },
@@ -2016,10 +2020,14 @@
             "type": "pubkey"
           },
           {
-            "name": "input_vault_before",
+            "name": "user",
             "docs": [
               "pool vault sub trade fees"
             ],
+            "type": "pubkey"
+          },
+          {
+            "name": "input_vault_before",
             "type": "u64"
           },
           {
